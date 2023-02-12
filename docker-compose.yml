@@ -1,0 +1,25 @@
+version: '3.7'
+
+networks:
+  default:
+    driver: bridge
+
+services:
+  helium-route-updater:
+    user: ${USER_ID:-1000}:${GROUP_ID:-1000}
+    build: ./
+    init: true
+    environment:
+      BUILD: "./cmd/helium-route-updater"
+      COMMAND: "/app/start.sh /app/bin/helium-route-updater"
+    volumes:
+      - ./:/app
+  test-server:
+    user: ${USER_ID:-1000}:${GROUP_ID:-1000}
+    build: ./
+    init: true
+    environment:
+      BUILD: "./cmd/test-server"
+      COMMAND: "/app/start.sh /app/bin/test-server"
+    volumes:
+      - ./:/app

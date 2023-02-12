@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package helium.poc_mobile;
+
+import "mapper.proto";
+
+message speedtest_req_v1 {
+  bytes pub_key = 1;
+  string serial = 2;
+  /// Timestamp of speedtest test in seconds from unix epoch
+  uint64 timestamp = 3;
+  /// Measured upload speed in bytes/sec. <value>*8/10E5 = Mbps
+  uint64 upload_speed = 4;
+  /// Measured download speed in bytes/sec. <value>*8/10E5 = Mbps
+  uint64 download_speed = 5;
+  /// Measured latency in milliseconds
+  uint32 latency = 6;
+
+  bytes signature = 7;
+}
+
+message speedtest_resp_v1 { string id = 1; }
+
+// speedtest report output by ingestor, tagged with received_timestamp
+message speedtest_ingest_report_v1 {
+  // timestamp in milliseconds since unix epoch
+  uint64 received_timestamp = 1;
+  speedtest_req_v1 report = 2;
+}
+
+message cell_heartbeat_req_v1 {
+  // Public key of the hotspot
+  bytes pub_key = 1;
+  string hotspot_type = 2;
+  uint32 cell_id = 3;
+  // Timestamp of heartbeat in seconds from unix epoch
+  uint64 timestamp = 4;
+  double lat = 5;
+  double lon = 6;
+  bool operation_mode = 7;
+  string cbsd_category = 8;
+  string cbsd_id = 9;
+
+  bytes signature = 10;
+}
+
+message cell_heartbeat_resp_v1 { string id = 1; }
+
+// cell heartbeat report output by ingestor, tagged with received_timestamp
+message cell_heartbeat_ingest_report_v1 {
+  // timestamp in millisconds since unix epoch
+  uint64 received_timestamp = 1;
+  cell_heartbeat_req_v1 report = 2;
+}
+
+// mapper attach report output by ingestor, tagged with received_timestamp
+message mapper_attach_ingest_report_v1 {
+  // timestamp in millisconds since unix epoch
+  uint64 received_timestamp = 1;
+  mapper_attach report = 2;
+}
+
+service poc_mobile {
+  rpc submit_speedtest(speedtest_req_v1) returns (speedtest_resp_v1);
+  rpc submit_cell_heartbeat(cell_heartbeat_req_v1)
+      returns (cell_heartbeat_resp_v1);
+  rpc submit_data_transfer_session(data_transfer_session_req_v1)
+      returns (data_transfer_session_resp_v1);
+}
+
+message file_info {
+  string key = 1;
+  file_type file_type = 2;
+  uint64 timestamp = 3;
+  uint64 size = 4;
+}
+
+message processed_files { repeated file_info files = 1; }
+
+message heartbeat {
+  string cbsd_id = 1;
+  bytes pub_key = 2;
+  float reward_multiplier = 3;
+  uint64 timestamp = 4;
+  cell_type cell_type = 5;
+  heartbeat_validity validity = 6;
+}
+
+enum heartbeat_validity {
+  heartbeat_validity_valid = 0;
+  heartbeat_validity_gateway_owner_not_found = 1;
+  heartbeat_validity_heartbeat_outside_range = 2;
+  heartbeat_validity_bad_cbsd_id = 3;
+  heartbeat_validity_not_operational = 4;
+}
+
+message speedtest_avg {
+  bytes pub_key = 1;
+  /// bytes/sec
+  uint64 upload_speed_avg_bps = 2;
+  /// bytes/sec
+  uint64 download_speed_avg_bps = 3;
+  uint32 latency_avg_ms = 4;
+  speedtest_avg_validity validity = 5;
+  repeated speedtest speedtests = 6;
+  /// Unix timestamp (seconds since 1970) of when the average was calculated
+  uint64 timestamp = 7;
+  float reward_multiplier = 8;
+}
+
+message speedtest {
+  uint64 upload_speed_bps = 1;
+  uint64 download_speed_bps = 2;
+  uint32 latency_ms = 3;
+  uint64 timestamp = 4;
+}
+
+message radio_reward_share {
+  /// Public key of the owner of the radio
+  bytes owner_key = 1;
+  /// Public key of the hotspot of the radio
+  bytes hotspot_key = 2;
+  /// cbsd Id of the radio
+  string cbsd_id = 3;
+  /// Amount rewarded to the owner of the radio
+  uint64 amount = 4;
+  /// Unix timestamp in seconds of the start of the reward period
+  uint64 start_epoch = 5;
+  /// Unix timestamp in seconds of the end of the reward period
+  uint64 end_epoch = 6;
+}
+
+enum speedtest_avg_validity {
+  speedtest_avg_validity_valid = 0;
+  speedtest_avg_validity_too_few_samples = 1;
+  speedtest_avg_validity_slow_download_speed = 2;
+  speedtest_avg_validity_slow_upload_speed = 3;
+  speedtest_avg_validity_high_latency = 4;
+}
+
+enum file_type {
+  file_type_heartbeat = 0;
+  file_type_speedtest = 1;
+}
+
+enum cell_type {
+  nova436h = 0;
+  nova430i = 1;
+  neutrino430 = 2;
+  sercomm_indoor = 3;
+  sercomm_outdoor = 4;
+}
+
+message data_transfer_session_req_v1 {
+  bytes pub_key = 1;
+  uint64 upload_bytes = 2;
+  uint64 download_bytes = 3;
+  data_transfer_radio_access_technology radio_access_technology = 4;
+  string session_id = 5;
+  bytes payer = 6;
+  bytes imsi_hash = 7;
+
+  // Timestamp in seconds since the epoch
+  uint64 timestamp = 8;
+  bytes signature = 9;
+}
+
+enum data_transfer_radio_access_technology {
+  UTRAN = 0;
+  GERAN = 1;
+  WLAN = 2;
+  GAN = 3;
+  HSPA_Evolution = 4;
+  EUTRAN = 5;
+}
+
+message data_transfer_session_resp_v1 { string id = 1; }
+
+message data_transfer_session_ingest_report_v1 {
+  // timestamp in milliseconds since unix epoch
+  uint64 received_timestamp = 1;
+  data_transfer_session_req_v1 report = 2;
+}

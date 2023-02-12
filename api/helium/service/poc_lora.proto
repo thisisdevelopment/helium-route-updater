@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+package helium.poc_lora;
+
+import "data_rate.proto";
+
+enum verification_status {
+  valid = 0;
+  invalid = 1;
+}
+
+enum invalid_participant_side {
+  side_none = 0;
+  beaconer = 2;
+  witness = 3;
+}
+
+enum invalid_reason {
+  reason_none = 0;
+  bad_signature = 1;
+  not_asserted = 2;
+  entropy_expired = 3;
+  bad_entropy = 4;
+  invalid_capability = 5;
+  invalid_pubkey = 6;
+  irregular_interval = 7;
+  gateway_not_found = 8;
+  denied = 9;
+  invalid_packet = 10;
+  bad_rssi = 11;
+  invalid_region = 12;
+  max_distance_exceeded = 13;
+  invalid_frequency = 14;
+  self_witness = 15;
+  stale = 16;
+  scaling_factor_not_found = 17;
+  unknown_error = 18;
+  below_min_distance = 19;
+}
+
+// beacon report as submitted by gateway to ingestor
+message lora_beacon_report_req_v1 {
+  bytes pub_key = 2;
+  bytes local_entropy = 3;
+  bytes remote_entropy = 4;
+  bytes data = 5;
+  // Frequency in Hz
+  uint64 frequency = 6;
+  int32 channel = 7;
+  data_rate datarate = 8;
+  // The Conducted transmit power in ddbm. This is _not_ adjusted with the
+  // asserted gain of the gateway
+  int32 tx_power = 9;
+  // Timestamp of beacon transmit in nanos since unix epoch
+  uint64 timestamp = 10;
+  bytes signature = 11;
+  uint32 tmst = 12;
+}
+
+// response returned to gateway submitting beacon report to ingestor
+message lora_beacon_report_resp_v1 { string id = 1; }
+
+// witness report as submitted by gateway to ingestor
+message lora_witness_report_req_v1 {
+  bytes pub_key = 2;
+  bytes data = 3;
+  // Timestamp of witness received in nanos since unix epoch
+  uint64 timestamp = 4;
+  uint32 tmst = 5;
+  // Signal in ddbm
+  sint32 signal = 6;
+  int32 snr = 7;
+  // Frequency in Hz
+  uint64 frequency = 8;
+  data_rate datarate = 10;
+  bytes signature = 11;
+}
+
+// response returned to gateway submitting witness report to ingestor
+message lora_witness_report_resp_v1 { string id = 1; }
+
+// beacon report outputted by ingestor, tagged with received timestamp
+message lora_beacon_ingest_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  lora_beacon_report_req_v1 report = 2;
+}
+
+// witness report outputted by ingestor, tagged with received timestamp
+message lora_witness_ingest_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  lora_witness_report_req_v1 report = 2;
+}
+
+// tagged valid beacon report produced by the verifier
+message lora_valid_beacon_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  string location = 2;
+  // integer representation of a 4-point precision decimal multiplier
+  // ex: 5015 == 0.5015
+  uint32 hex_scale = 3;
+  lora_beacon_report_req_v1 report = 4;
+  // integer representation of a 4-point precision decimal multiplier
+  // based on the number of witnesses to a poc event
+  uint32 reward_unit = 5;
+}
+
+// tagged valid witness report produced by the verifier
+message lora_valid_witness_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  string location = 2;
+  // integer representation of a 4-point precision decimal multiplier
+  // ex: 5015 == 0.5015
+  uint32 hex_scale = 3;
+  lora_witness_report_req_v1 report = 4;
+  // integer representation of a 4-point precision decimal multiplier
+  // based on the number of witnesses to a poc event
+  uint32 reward_unit = 5;
+}
+
+// tagged invalid beacon report produced by the verifier
+message lora_invalid_beacon_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  invalid_reason reason = 2;
+  lora_beacon_report_req_v1 report = 3;
+}
+
+// tagged invalid witness report produced by the verifier
+message lora_invalid_witness_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  invalid_reason reason = 2;
+  lora_witness_report_req_v1 report = 3;
+  // the participant to which the reason applies,
+  // which rendered the report as invalid
+  invalid_participant_side participant_side = 4;
+}
+
+// tagged verified witness report produced by the verifier
+message lora_verified_witness_report_v1 {
+  // Timestamp at ingest in millis since unix epoch
+  uint64 received_timestamp = 1;
+  verification_status status = 2;
+  lora_witness_report_req_v1 report = 3;
+  string location = 4;
+  uint32 hex_scale = 5;
+  // integer representation of a 4-point precision decimal multiplier
+  // based on the number of witnesses to a poc event
+  uint32 reward_unit = 6;
+  invalid_reason invalid_reason = 7;
+  // the participant to which the reason applies,
+  // which rendered the report as invalid
+  invalid_participant_side participant_side = 8;
+}
+
+// POC report produced by the verifier
+// includes a valid beacon and both valid & invalid witness reports
+message lora_poc_v1 {
+  bytes poc_id = 1;
+  lora_valid_beacon_report_v1 beacon_report = 2;
+  repeated lora_verified_witness_report_v1 selected_witnesses = 3;
+  repeated lora_verified_witness_report_v1 unselected_witnesses = 4;
+}
+
+// iot per-gateway reward share for a given reward period
+// for PoC coverage events provided between the start and end timestamps
+message gateway_reward_share {
+  /// Public key of the hotspot
+  bytes hotspot_key = 1;
+  /// Amount credited to the hotspot for beaconing
+  uint64 beacon_amount = 2;
+  /// Amount credited to the hotspot for witnessing
+  uint64 witness_amount = 3;
+  /// Unix timestamp in seconds of the start of the reward period
+  uint64 start_period = 4;
+  /// Unix timestamp in seconds of the end of the reward period
+  uint64 end_period = 5;
+}
+
+service poc_lora {
+  rpc submit_lora_beacon(lora_beacon_report_req_v1)
+      returns (lora_beacon_report_resp_v1);
+  rpc submit_lora_witness(lora_witness_report_req_v1)
+      returns (lora_witness_report_resp_v1);
+}
