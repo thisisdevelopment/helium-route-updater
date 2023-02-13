@@ -1,9 +1,7 @@
 #!/bin/bash
 
 package="github.com/thisisdevelopment/helium-route-updater/pkg"
-
 dir="api/helium"
-file=""
 go_opts="--go_opt=module=${package}"
 grpc_opts="--go-grpc_opt=module=${package}"
 for file in $(find ${dir} -not -path "${dir}/service/*" -name "*.proto"); do
