@@ -17,6 +17,7 @@ type SignedRequest interface {
 }
 
 func Sign[T SignedRequest](req T) T {
+	//TODO: as protoc-gen-go does not generate setters (https://github.com/golang/protobuf/issues/664) we revert to reflection here
 	reflect.ValueOf(req).Elem().FieldByName("Signature").SetBytes([]byte{})
 
 	//TODO sign
@@ -43,7 +44,6 @@ func Run(server string, routeId string, ch <-chan listener.DeviceEvent) {
 	client := iot_config.NewRouteClient(conn)
 	u, err := client.UpdateEuis(ctx)
 
-	//TODO: auth
 	for event := range ch {
 		pair := &iot_config.EuiPairV1{
 			RouteId: routeId,
