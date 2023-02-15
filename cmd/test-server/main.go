@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
+	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
 	"google.golang.org/grpc"
 	"io"
 	"log"
@@ -15,6 +16,7 @@ import (
 type TestServer struct {
 	iot_config.UnimplementedRouteServer
 	Oui          uint64
+	KeyPair      *helium_crypto.KeyPair
 	Routes       map[string]*iot_config.RouteV1
 	RouteDevices map[string]map[string]*iot_config.EuiPairV1
 }
@@ -105,7 +107,6 @@ func (t *TestServer) GetEuis(req *iot_config.RouteGetEuisReqV1, srv iot_config.R
 }
 func (t *TestServer) UpdateEuis(srv iot_config.Route_UpdateEuisServer) error {
 	ctx := srv.Context()
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -121,6 +122,11 @@ func (t *TestServer) UpdateEuis(srv iot_config.Route_UpdateEuisServer) error {
 			continue
 		}
 
+		if !helium_crypto.VerifyRequest(req, t.KeyPair) {
+			log.Println("Invalid signature!!")
+			return fmt.Errorf("invalid signature")
+		}
+
 		_, found := t.Routes[req.EuiPair.RouteId]
 		if !found {
 			return fmt.Errorf("route not found")
@@ -134,13 +140,18 @@ func (t *TestServer) UpdateEuis(srv iot_config.Route_UpdateEuisServer) error {
 			if exists {
 				return fmt.Errorf("route already exists for deveui: %s", devEui)
 			}
+			fmt.Printf("Added euipair: %+v\n", req.EuiPair)
 			t.RouteDevices[req.EuiPair.RouteId][devEui] = req.EuiPair
 			break
 		case iot_config.ActionV1_remove:
 			if !exists {
 				return fmt.Errorf("route does not exist for deveui: %s", devEui)
 			}
+			fmt.Printf("removed euipair: %+v\n", req.EuiPair)
 			delete(t.RouteDevices[req.EuiPair.RouteId], devEui)
+			break
+		default:
+			panic("not implemented")
 		}
 	}
 
@@ -173,6 +184,7 @@ func main() {
 
 	testServer := &TestServer{
 		Oui:          oui,
+		KeyPair:      helium_crypto.KeyPairFromString("13ooSU22gnnV6DPEqp8dGzXfmVc4r6AeK7JZWb6fs934cTAu7fu"),
 		Routes:       make(map[string]*iot_config.RouteV1),
 		RouteDevices: make(map[string]map[string]*iot_config.EuiPairV1),
 	}

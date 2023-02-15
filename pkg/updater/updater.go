@@ -3,33 +3,14 @@ package updater
 import (
 	"context"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
+	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/listener"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/proto"
 	"log"
-	"reflect"
 )
 
-type SignedRequest interface {
-	proto.Message
-	GetSignature() []byte
-}
-
-func Sign[T SignedRequest](req T) T {
-	//TODO: as protoc-gen-go does not generate setters (https://github.com/golang/protobuf/issues/664) we revert to reflection here
-	reflect.ValueOf(req).Elem().FieldByName("Signature").SetBytes([]byte{})
-
-	//TODO sign
-	//marshalled, _ := proto.Marshal(req)
-
-	signature := []byte{}
-	reflect.ValueOf(req).Elem().FieldByName("Signature").SetBytes(signature)
-
-	return req
-}
-
-func Run(server string, routeId string, ch <-chan listener.DeviceEvent) {
+func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-chan listener.DeviceEvent) {
 	ctx := context.Background()
 	conn, err := grpc.Dial(
 		server,
@@ -52,24 +33,24 @@ func Run(server string, routeId string, ch <-chan listener.DeviceEvent) {
 		}
 
 		if event.EventType == listener.EventType_Updated || event.EventType == listener.EventType_Deleted {
-			err := u.Send(Sign(&iot_config.RouteUpdateEuisReqV1{
+			err := u.Send(helium_crypto.SignRequest(&iot_config.RouteUpdateEuisReqV1{
 				Action:    iot_config.ActionV1_remove,
 				EuiPair:   pair,
 				Timestamp: 0,
 				Signature: nil,
-			}))
+			}, keypair))
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
 		}
 		if event.EventType == listener.EventType_Updated || event.EventType == listener.EventType_Added {
-			err := u.Send(Sign(&iot_config.RouteUpdateEuisReqV1{
+			err := u.Send(helium_crypto.SignRequest(&iot_config.RouteUpdateEuisReqV1{
 				Action:    iot_config.ActionV1_add,
 				EuiPair:   pair,
 				Timestamp: 0,
 				Signature: nil,
-			}))
+			}, keypair))
 			if err != nil {
 				log.Fatal(err)
 				return

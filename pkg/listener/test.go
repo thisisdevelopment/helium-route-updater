@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/google/uuid"
 	"time"
 )
@@ -15,10 +16,12 @@ func (t *TestListener) Listen() {
 	defer ticker.Stop()
 	for _ = range ticker.C {
 		id, _ := uuid.New().MarshalBinary()
-		t.ch <- DeviceEvent{
+		event := DeviceEvent{
 			DevEui:    binary.BigEndian.Uint64(id[0:8]),
 			AppEui:    binary.BigEndian.Uint64(id[8:16]),
 			EventType: EventType_Added,
 		}
+		fmt.Printf("Generated: %+v\n", event)
+		t.ch <- event
 	}
 }

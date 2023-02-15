@@ -55,25 +55,26 @@ func (k *KeyPair) Bytes() []byte {
 	if k.PrivateKey == nil {
 		res = append(res, k.PublicKey...)
 	} else {
+		// public key is contained in private key, so no need to output it separately here
 		res = append(res, k.PrivateKey...)
 	}
 	return res
 }
 
 func (k *KeyPair) String() string {
-	return base58.Encode(k.Bytes())
+	return base58.CheckEncode(k.Bytes(), 0)
 }
 
 func KeyPairFromBytes(input []byte) *KeyPair {
 	var publicKey, privateKey []byte
-	if len(input) == ed25519.PrivateKeySize+ed25519.PublicKeySize+1 {
+	if len(input) == ed25519.PrivateKeySize+1 {
 		privateKey = input[1:]
-		publicKey = input[ed25519.PrivateKeySize+1:]
+		publicKey = input[ed25519.PrivateKeySize-ed25519.PublicKeySize+1:]
 	} else if len(input) == ed25519.PublicKeySize+1 {
 		privateKey = nil
 		publicKey = input[1:]
 	} else {
-		panic("invalid length: " + strconv.FormatInt(int64(len(input)), 10))
+		panic("invalid keypair length: " + strconv.FormatInt(int64(len(input)), 10))
 	}
 
 	return &KeyPair{
@@ -85,7 +86,8 @@ func KeyPairFromBytes(input []byte) *KeyPair {
 }
 
 func KeyPairFromString(input string) *KeyPair {
-	return KeyPairFromBytes(base58.Decode(input))
+	bytes, _, _ := base58.CheckDecode(input)
+	return KeyPairFromBytes(bytes)
 }
 
 func KeyPairGenerate(networkType byte, keyType byte) *KeyPair {
