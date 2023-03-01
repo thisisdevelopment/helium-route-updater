@@ -23,13 +23,18 @@ func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-cha
 	defer conn.Close()
 
 	client := iot_config.NewRouteClient(conn)
-	u, err := client.UpdateEuis(ctx)
 
 	for event := range ch {
 		pair := &iot_config.EuiPairV1{
 			RouteId: routeId,
 			AppEui:  event.AppEui,
 			DevEui:  event.DevEui,
+		}
+
+		u, err := client.UpdateEuis(ctx)
+		if err != nil {
+			log.Fatal(err)
+			return
 		}
 
 		if event.EventType == listener.EventType_Updated || event.EventType == listener.EventType_Deleted {
@@ -55,6 +60,12 @@ func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-cha
 				log.Fatal(err)
 				return
 			}
+		}
+
+		_, err = u.CloseAndRecv()
+		if err != nil {
+			log.Fatal(err)
+			return
 		}
 	}
 }
