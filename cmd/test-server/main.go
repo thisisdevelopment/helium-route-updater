@@ -138,14 +138,16 @@ func (t *TestServer) UpdateEuis(srv iot_config.Route_UpdateEuisServer) error {
 		switch req.Action {
 		case iot_config.ActionV1_add:
 			if exists {
-				return fmt.Errorf("route already exists for deveui: %s", devEui)
+				fmt.Printf("route already exists for deveui: %s\n", devEui)
+				break
 			}
 			fmt.Printf("Added euipair: %+v\n", req.EuiPair)
 			t.RouteDevices[req.EuiPair.RouteId][devEui] = req.EuiPair
 			break
 		case iot_config.ActionV1_remove:
 			if !exists {
-				return fmt.Errorf("route does not exist for deveui: %s", devEui)
+				fmt.Printf("route does not exist for deveui: %s\n", devEui)
+				break
 			}
 			fmt.Printf("removed euipair: %+v\n", req.EuiPair)
 			delete(t.RouteDevices[req.EuiPair.RouteId], devEui)
@@ -156,17 +158,6 @@ func (t *TestServer) UpdateEuis(srv iot_config.Route_UpdateEuisServer) error {
 	}
 
 	return srv.SendAndClose(&iot_config.RouteEuisResV1{})
-}
-
-// Delete all EUIs for a Route (auth delegate_keys/owner/admin)
-func (t *TestServer) DeleteEuis(ctx context.Context, req *iot_config.RouteDeleteEuisReqV1) (*iot_config.RouteEuisResV1, error) {
-	_, found := t.Routes[req.RouteId]
-	if !found {
-		return nil, fmt.Errorf("route not found")
-	}
-	delete(t.RouteDevices, req.RouteId)
-
-	return &iot_config.RouteEuisResV1{}, nil
 }
 
 func main() {

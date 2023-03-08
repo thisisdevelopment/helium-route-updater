@@ -319,15 +319,11 @@ type RouteClient interface {
 	// Update (single add or remove) EUIs for a Route (auth
 	// delegate_keys/owner/admin)
 	UpdateEuis(ctx context.Context, opts ...grpc.CallOption) (Route_UpdateEuisClient, error)
-	// Delete all EUIs for a Route (auth delegate_keys/owner/admin)
-	DeleteEuis(ctx context.Context, in *RouteDeleteEuisReqV1, opts ...grpc.CallOption) (*RouteEuisResV1, error)
 	// Get DevAddr Ranges for a Route (auth delegate_keys/owner/admin)
 	GetDevaddrRanges(ctx context.Context, in *RouteGetDevaddrRangesReqV1, opts ...grpc.CallOption) (Route_GetDevaddrRangesClient, error)
 	// Update (single add or remove) DevAddr Ranges for a Route (auth
 	// delegate_keys/owner/admin)
 	UpdateDevaddrRanges(ctx context.Context, opts ...grpc.CallOption) (Route_UpdateDevaddrRangesClient, error)
-	// Delete all DevAddr Ranges for a Route (auth delegate_keys/owner/admin)
-	DeleteDevaddrRanges(ctx context.Context, in *RouteDeleteDevaddrRangesReqV1, opts ...grpc.CallOption) (*RouteDevaddrRangesResV1, error)
 	// Stream Routes update (auth admin only)
 	Stream(ctx context.Context, in *RouteStreamReqV1, opts ...grpc.CallOption) (Route_StreamClient, error)
 }
@@ -451,15 +447,6 @@ func (x *routeUpdateEuisClient) CloseAndRecv() (*RouteEuisResV1, error) {
 	return m, nil
 }
 
-func (c *routeClient) DeleteEuis(ctx context.Context, in *RouteDeleteEuisReqV1, opts ...grpc.CallOption) (*RouteEuisResV1, error) {
-	out := new(RouteEuisResV1)
-	err := c.cc.Invoke(ctx, "/helium.iot_config.route/delete_euis", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *routeClient) GetDevaddrRanges(ctx context.Context, in *RouteGetDevaddrRangesReqV1, opts ...grpc.CallOption) (Route_GetDevaddrRangesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[2], "/helium.iot_config.route/get_devaddr_ranges", opts...)
 	if err != nil {
@@ -526,15 +513,6 @@ func (x *routeUpdateDevaddrRangesClient) CloseAndRecv() (*RouteDevaddrRangesResV
 	return m, nil
 }
 
-func (c *routeClient) DeleteDevaddrRanges(ctx context.Context, in *RouteDeleteDevaddrRangesReqV1, opts ...grpc.CallOption) (*RouteDevaddrRangesResV1, error) {
-	out := new(RouteDevaddrRangesResV1)
-	err := c.cc.Invoke(ctx, "/helium.iot_config.route/delete_devaddr_ranges", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *routeClient) Stream(ctx context.Context, in *RouteStreamReqV1, opts ...grpc.CallOption) (Route_StreamClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[4], "/helium.iot_config.route/stream", opts...)
 	if err != nil {
@@ -586,15 +564,11 @@ type RouteServer interface {
 	// Update (single add or remove) EUIs for a Route (auth
 	// delegate_keys/owner/admin)
 	UpdateEuis(Route_UpdateEuisServer) error
-	// Delete all EUIs for a Route (auth delegate_keys/owner/admin)
-	DeleteEuis(context.Context, *RouteDeleteEuisReqV1) (*RouteEuisResV1, error)
 	// Get DevAddr Ranges for a Route (auth delegate_keys/owner/admin)
 	GetDevaddrRanges(*RouteGetDevaddrRangesReqV1, Route_GetDevaddrRangesServer) error
 	// Update (single add or remove) DevAddr Ranges for a Route (auth
 	// delegate_keys/owner/admin)
 	UpdateDevaddrRanges(Route_UpdateDevaddrRangesServer) error
-	// Delete all DevAddr Ranges for a Route (auth delegate_keys/owner/admin)
-	DeleteDevaddrRanges(context.Context, *RouteDeleteDevaddrRangesReqV1) (*RouteDevaddrRangesResV1, error)
 	// Stream Routes update (auth admin only)
 	Stream(*RouteStreamReqV1, Route_StreamServer) error
 	mustEmbedUnimplementedRouteServer()
@@ -625,17 +599,11 @@ func (UnimplementedRouteServer) GetEuis(*RouteGetEuisReqV1, Route_GetEuisServer)
 func (UnimplementedRouteServer) UpdateEuis(Route_UpdateEuisServer) error {
 	return status.Errorf(codes.Unimplemented, "method UpdateEuis not implemented")
 }
-func (UnimplementedRouteServer) DeleteEuis(context.Context, *RouteDeleteEuisReqV1) (*RouteEuisResV1, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteEuis not implemented")
-}
 func (UnimplementedRouteServer) GetDevaddrRanges(*RouteGetDevaddrRangesReqV1, Route_GetDevaddrRangesServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetDevaddrRanges not implemented")
 }
 func (UnimplementedRouteServer) UpdateDevaddrRanges(Route_UpdateDevaddrRangesServer) error {
 	return status.Errorf(codes.Unimplemented, "method UpdateDevaddrRanges not implemented")
-}
-func (UnimplementedRouteServer) DeleteDevaddrRanges(context.Context, *RouteDeleteDevaddrRangesReqV1) (*RouteDevaddrRangesResV1, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteDevaddrRanges not implemented")
 }
 func (UnimplementedRouteServer) Stream(*RouteStreamReqV1, Route_StreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
@@ -790,24 +758,6 @@ func (x *routeUpdateEuisServer) Recv() (*RouteUpdateEuisReqV1, error) {
 	return m, nil
 }
 
-func _Route_DeleteEuis_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteDeleteEuisReqV1)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RouteServer).DeleteEuis(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/helium.iot_config.route/delete_euis",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RouteServer).DeleteEuis(ctx, req.(*RouteDeleteEuisReqV1))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Route_GetDevaddrRanges_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(RouteGetDevaddrRangesReqV1)
 	if err := stream.RecvMsg(m); err != nil {
@@ -853,24 +803,6 @@ func (x *routeUpdateDevaddrRangesServer) Recv() (*RouteUpdateDevaddrRangesReqV1,
 		return nil, err
 	}
 	return m, nil
-}
-
-func _Route_DeleteDevaddrRanges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteDeleteDevaddrRangesReqV1)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RouteServer).DeleteDevaddrRanges(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/helium.iot_config.route/delete_devaddr_ranges",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RouteServer).DeleteDevaddrRanges(ctx, req.(*RouteDeleteDevaddrRangesReqV1))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Route_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -920,14 +852,6 @@ var Route_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "delete",
 			Handler:    _Route_Delete_Handler,
-		},
-		{
-			MethodName: "delete_euis",
-			Handler:    _Route_DeleteEuis_Handler,
-		},
-		{
-			MethodName: "delete_devaddr_ranges",
-			Handler:    _Route_DeleteDevaddrRanges_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -1284,9 +1208,8 @@ type GatewayClient interface {
 	// Return the region params for the asserted location of the signed gateway
 	// address (no auth, but signature validated)
 	RegionParams(ctx context.Context, in *GatewayRegionParamsReqV1, opts ...grpc.CallOption) (*GatewayRegionParamsResV1, error)
-	// Load params and cell indexes for a region into the config service (auth
-	// admin only)
-	LoadRegion(ctx context.Context, in *GatewayLoadRegionReqV1, opts ...grpc.CallOption) (*GatewayLoadRegionResV1, error)
+	// Get H3 Location for a gateway (auth admin only)
+	Location(ctx context.Context, in *GatewayLocationReqV1, opts ...grpc.CallOption) (*GatewayLocationResV1, error)
 }
 
 type gatewayClient struct {
@@ -1306,9 +1229,9 @@ func (c *gatewayClient) RegionParams(ctx context.Context, in *GatewayRegionParam
 	return out, nil
 }
 
-func (c *gatewayClient) LoadRegion(ctx context.Context, in *GatewayLoadRegionReqV1, opts ...grpc.CallOption) (*GatewayLoadRegionResV1, error) {
-	out := new(GatewayLoadRegionResV1)
-	err := c.cc.Invoke(ctx, "/helium.iot_config.gateway/load_region", in, out, opts...)
+func (c *gatewayClient) Location(ctx context.Context, in *GatewayLocationReqV1, opts ...grpc.CallOption) (*GatewayLocationResV1, error) {
+	out := new(GatewayLocationResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.gateway/location", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1322,9 +1245,8 @@ type GatewayServer interface {
 	// Return the region params for the asserted location of the signed gateway
 	// address (no auth, but signature validated)
 	RegionParams(context.Context, *GatewayRegionParamsReqV1) (*GatewayRegionParamsResV1, error)
-	// Load params and cell indexes for a region into the config service (auth
-	// admin only)
-	LoadRegion(context.Context, *GatewayLoadRegionReqV1) (*GatewayLoadRegionResV1, error)
+	// Get H3 Location for a gateway (auth admin only)
+	Location(context.Context, *GatewayLocationReqV1) (*GatewayLocationResV1, error)
 	mustEmbedUnimplementedGatewayServer()
 }
 
@@ -1335,8 +1257,8 @@ type UnimplementedGatewayServer struct {
 func (UnimplementedGatewayServer) RegionParams(context.Context, *GatewayRegionParamsReqV1) (*GatewayRegionParamsResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegionParams not implemented")
 }
-func (UnimplementedGatewayServer) LoadRegion(context.Context, *GatewayLoadRegionReqV1) (*GatewayLoadRegionResV1, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LoadRegion not implemented")
+func (UnimplementedGatewayServer) Location(context.Context, *GatewayLocationReqV1) (*GatewayLocationResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Location not implemented")
 }
 func (UnimplementedGatewayServer) mustEmbedUnimplementedGatewayServer() {}
 
@@ -1369,20 +1291,20 @@ func _Gateway_RegionParams_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Gateway_LoadRegion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GatewayLoadRegionReqV1)
+func _Gateway_Location_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayLocationReqV1)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GatewayServer).LoadRegion(ctx, in)
+		return srv.(GatewayServer).Location(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/helium.iot_config.gateway/load_region",
+		FullMethod: "/helium.iot_config.gateway/location",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayServer).LoadRegion(ctx, req.(*GatewayLoadRegionReqV1))
+		return srv.(GatewayServer).Location(ctx, req.(*GatewayLocationReqV1))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1399,8 +1321,174 @@ var Gateway_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Gateway_RegionParams_Handler,
 		},
 		{
+			MethodName: "location",
+			Handler:    _Gateway_Location_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "service/iot_config.proto",
+}
+
+// AdminClient is the client API for Admin service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AdminClient interface {
+	// Authorize a public key for validating trusted rpcs
+	AddKey(ctx context.Context, in *AdminAddKeyReqV1, opts ...grpc.CallOption) (*AdminKeyResV1, error)
+	// Deauthorize a public key for validating trusted rpcs
+	RemoveKey(ctx context.Context, in *AdminRemoveKeyReqV1, opts ...grpc.CallOption) (*AdminKeyResV1, error)
+	// Load params and cell indexes for a region into the config service (auth
+	// admin only)
+	LoadRegion(ctx context.Context, in *AdminLoadRegionReqV1, opts ...grpc.CallOption) (*AdminLoadRegionResV1, error)
+}
+
+type adminClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAdminClient(cc grpc.ClientConnInterface) AdminClient {
+	return &adminClient{cc}
+}
+
+func (c *adminClient) AddKey(ctx context.Context, in *AdminAddKeyReqV1, opts ...grpc.CallOption) (*AdminKeyResV1, error) {
+	out := new(AdminKeyResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.admin/add_key", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) RemoveKey(ctx context.Context, in *AdminRemoveKeyReqV1, opts ...grpc.CallOption) (*AdminKeyResV1, error) {
+	out := new(AdminKeyResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.admin/remove_key", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) LoadRegion(ctx context.Context, in *AdminLoadRegionReqV1, opts ...grpc.CallOption) (*AdminLoadRegionResV1, error) {
+	out := new(AdminLoadRegionResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.admin/load_region", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AdminServer is the server API for Admin service.
+// All implementations must embed UnimplementedAdminServer
+// for forward compatibility
+type AdminServer interface {
+	// Authorize a public key for validating trusted rpcs
+	AddKey(context.Context, *AdminAddKeyReqV1) (*AdminKeyResV1, error)
+	// Deauthorize a public key for validating trusted rpcs
+	RemoveKey(context.Context, *AdminRemoveKeyReqV1) (*AdminKeyResV1, error)
+	// Load params and cell indexes for a region into the config service (auth
+	// admin only)
+	LoadRegion(context.Context, *AdminLoadRegionReqV1) (*AdminLoadRegionResV1, error)
+	mustEmbedUnimplementedAdminServer()
+}
+
+// UnimplementedAdminServer must be embedded to have forward compatible implementations.
+type UnimplementedAdminServer struct {
+}
+
+func (UnimplementedAdminServer) AddKey(context.Context, *AdminAddKeyReqV1) (*AdminKeyResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddKey not implemented")
+}
+func (UnimplementedAdminServer) RemoveKey(context.Context, *AdminRemoveKeyReqV1) (*AdminKeyResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveKey not implemented")
+}
+func (UnimplementedAdminServer) LoadRegion(context.Context, *AdminLoadRegionReqV1) (*AdminLoadRegionResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoadRegion not implemented")
+}
+func (UnimplementedAdminServer) mustEmbedUnimplementedAdminServer() {}
+
+// UnsafeAdminServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AdminServer will
+// result in compilation errors.
+type UnsafeAdminServer interface {
+	mustEmbedUnimplementedAdminServer()
+}
+
+func RegisterAdminServer(s grpc.ServiceRegistrar, srv AdminServer) {
+	s.RegisterService(&Admin_ServiceDesc, srv)
+}
+
+func _Admin_AddKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminAddKeyReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).AddKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.admin/add_key",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).AddKey(ctx, req.(*AdminAddKeyReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_RemoveKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminRemoveKeyReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).RemoveKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.admin/remove_key",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).RemoveKey(ctx, req.(*AdminRemoveKeyReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_LoadRegion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminLoadRegionReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).LoadRegion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.admin/load_region",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).LoadRegion(ctx, req.(*AdminLoadRegionReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Admin_ServiceDesc is the grpc.ServiceDesc for Admin service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Admin_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "helium.iot_config.admin",
+	HandlerType: (*AdminServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "add_key",
+			Handler:    _Admin_AddKey_Handler,
+		},
+		{
+			MethodName: "remove_key",
+			Handler:    _Admin_RemoveKey_Handler,
+		},
+		{
 			MethodName: "load_region",
-			Handler:    _Gateway_LoadRegion_Handler,
+			Handler:    _Admin_LoadRegion_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
