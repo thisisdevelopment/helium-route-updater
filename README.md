@@ -1,13 +1,11 @@
 # Helium Router Updater
 
-Automatically adds / removes euis from your helium routes based on updates from your LNS (currently only chirpstack is directly supported)
+Automatically adds / removes euis from your helium routes based on updates from your LNS
 
 ## Status
 
-Alpha! First prototype and not yet fully working
-
-Currently, as of feb 12 2023, Helium does not support this in production.   
-This depends on all the changes that they are doing for [HIP70](https://github.com/helium/HIP/blob/main/0070-scaling-helium.md)
+**Beta**  
+We use this internally and things may change (either on our side or on the helium side)  
 
 ## Purpose
 
@@ -21,25 +19,63 @@ Make it easy to integrate a new [Oui](https://docs.helium.com/use-the-network/ru
   - with your own DevAddr range
   - allows connections from unknown gateways
   - your gateway bridge should be publicly accessible 
-- a preconfigured route 
+  - should store appeui somewhere as this is required for helium; but not natively supported by chirpstack
+- a preconfigured route (see adding routes)
 - enough credit in your wallet to "buy" messages
 
-## Usage
-
-You can use this in 2 ways:
-- as a standalone daemon that listens to device updates from the specified lns (lora network server); for now it only support chirpstack
-- as a lib; either use the included listeners to listen for device updates or roll your own and integrate it in your own program 
-
-### Standalone usage
+## Standalone usage
 
 ```
-//TODO
+Currently not implemented
 ```
 
-### Library usage
+## Library usage
+
+```go
+ch := make(chan listener.DeviceEvent)
+
+keypair := helium_crypto.KeyPairFromString(config.Auth)
+go updater.Run(config.Server, config.RouteId, keypair, ch)
+
+devEui, _ := strconv.ParseUint("<your device id>", 16, 64)
+appEui, _ := strconv.ParseUint("<your app eui>", 16, 64)
+ch <- listener.DeviceEvent{
+    DevEui:    devEui,
+    AppEui:    appEui,
+    EventType: eventType,
+}
 
 ```
-//TODO
+
+## Adding routes
+
+### Step 1: build helium-config-service-cli
+
+This is used to create a new route for your oui
+
+```bash
+git clone https://github.com/helium/helium-config-service-cli ./source
+docker run -v $(pwd)/source:/app -w /app rust:1.70 bash -c "apt-get update && apt-get install -y protobuf-compiler && cargo install --path ."
+sudo mv source/target/release/helium-config-service-cli ./
+sudo chown $(id -u):$(id -g) ./helium-config-service-cli
+```
+
+#### Step 2: create route
+
+For this you'll need the info from when you created your oui.
+Change your regions/ports where needed. For chirpstack you'll need a separate port per region.
+
+```base
+export HELIUM_KEYPAIR_BIN=<path to your private (delegate) key file>
+export HELIUM_NET_ID=<your netid>
+export HELIUM_OUI=<your oui>
+export HELIUM_MAX_COPIES=5
+export SERVER_HOST=<your public LNS server hostname>
+export SERVER_PORT=<your public LNS server port>
+
+rid=$(./helium-config-service-cli route new --commit  | cut -f3 -d' ')
+./helium-config-service-cli route update server -r $rid --host $SERVER_HOST --port $SERVER_PORT --commit
+./helium-config-service-cli route update add-gwmp-region -r $rid eu868 $SERVER_PORT --commit
 ```
 
 # Contributing

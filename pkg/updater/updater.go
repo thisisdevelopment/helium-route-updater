@@ -15,6 +15,7 @@ func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-cha
 	conn, err := grpc.Dial(
 		server,
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
+		//yes this is correct, ssl/tls is not supported :-(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {

@@ -30,6 +30,10 @@ type OrgClient interface {
 	CreateHelium(ctx context.Context, in *OrgCreateHeliumReqV1, opts ...grpc.CallOption) (*OrgResV1, error)
 	// Create Org on any network (auth admin only)
 	CreateRoamer(ctx context.Context, in *OrgCreateRoamerReqV1, opts ...grpc.CallOption) (*OrgResV1, error)
+	// Update any Org (Helium or Roaming)
+	// Modify payer and add/remove delegate keys (owner/admin)
+	// Modify owner and add/remove devaddr constraints (auth admin only)
+	Update(ctx context.Context, in *OrgUpdateReqV1, opts ...grpc.CallOption) (*OrgResV1, error)
 	// Disable an org, this sends a stream route delete update to HPR
 	// for all associated routes (auth admin only)
 	Disable(ctx context.Context, in *OrgDisableReqV1, opts ...grpc.CallOption) (*OrgDisableResV1, error)
@@ -82,6 +86,15 @@ func (c *orgClient) CreateRoamer(ctx context.Context, in *OrgCreateRoamerReqV1, 
 	return out, nil
 }
 
+func (c *orgClient) Update(ctx context.Context, in *OrgUpdateReqV1, opts ...grpc.CallOption) (*OrgResV1, error) {
+	out := new(OrgResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.org/update", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *orgClient) Disable(ctx context.Context, in *OrgDisableReqV1, opts ...grpc.CallOption) (*OrgDisableResV1, error) {
 	out := new(OrgDisableResV1)
 	err := c.cc.Invoke(ctx, "/helium.iot_config.org/disable", in, out, opts...)
@@ -112,6 +125,10 @@ type OrgServer interface {
 	CreateHelium(context.Context, *OrgCreateHeliumReqV1) (*OrgResV1, error)
 	// Create Org on any network (auth admin only)
 	CreateRoamer(context.Context, *OrgCreateRoamerReqV1) (*OrgResV1, error)
+	// Update any Org (Helium or Roaming)
+	// Modify payer and add/remove delegate keys (owner/admin)
+	// Modify owner and add/remove devaddr constraints (auth admin only)
+	Update(context.Context, *OrgUpdateReqV1) (*OrgResV1, error)
 	// Disable an org, this sends a stream route delete update to HPR
 	// for all associated routes (auth admin only)
 	Disable(context.Context, *OrgDisableReqV1) (*OrgDisableResV1, error)
@@ -136,6 +153,9 @@ func (UnimplementedOrgServer) CreateHelium(context.Context, *OrgCreateHeliumReqV
 }
 func (UnimplementedOrgServer) CreateRoamer(context.Context, *OrgCreateRoamerReqV1) (*OrgResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateRoamer not implemented")
+}
+func (UnimplementedOrgServer) Update(context.Context, *OrgUpdateReqV1) (*OrgResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedOrgServer) Disable(context.Context, *OrgDisableReqV1) (*OrgDisableResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Disable not implemented")
@@ -228,6 +248,24 @@ func _Org_CreateRoamer_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Org_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrgUpdateReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrgServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.org/update",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrgServer).Update(ctx, req.(*OrgUpdateReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Org_Disable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OrgDisableReqV1)
 	if err := dec(in); err != nil {
@@ -288,6 +326,10 @@ var Org_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Org_CreateRoamer_Handler,
 		},
 		{
+			MethodName: "update",
+			Handler:    _Org_Update_Handler,
+		},
+		{
 			MethodName: "disable",
 			Handler:    _Org_Disable_Handler,
 		},
@@ -307,13 +349,15 @@ type RouteClient interface {
 	// List Routes for an Org (auth delegate_keys/owner/admin)
 	List(ctx context.Context, in *RouteListReqV1, opts ...grpc.CallOption) (*RouteListResV1, error)
 	// Get Route for an Org (auth delegate_keys/owner/admin)
-	Get(ctx context.Context, in *RouteGetReqV1, opts ...grpc.CallOption) (*RouteV1, error)
+	Get(ctx context.Context, in *RouteGetReqV1, opts ...grpc.CallOption) (*RouteResV1, error)
 	// Create Route for an Org (auth delegate_keys/owner/admin)
-	Create(ctx context.Context, in *RouteCreateReqV1, opts ...grpc.CallOption) (*RouteV1, error)
+	Create(ctx context.Context, in *RouteCreateReqV1, opts ...grpc.CallOption) (*RouteResV1, error)
 	// Update Route for an Org (auth delegate_keys/owner/admin)
-	Update(ctx context.Context, in *RouteUpdateReqV1, opts ...grpc.CallOption) (*RouteV1, error)
+	Update(ctx context.Context, in *RouteUpdateReqV1, opts ...grpc.CallOption) (*RouteResV1, error)
 	// Delete Route for an Org (auth delegate_keys/owner/admin)
-	Delete(ctx context.Context, in *RouteDeleteReqV1, opts ...grpc.CallOption) (*RouteV1, error)
+	Delete(ctx context.Context, in *RouteDeleteReqV1, opts ...grpc.CallOption) (*RouteResV1, error)
+	// Stream Routes update (auth admin only)
+	Stream(ctx context.Context, in *RouteStreamReqV1, opts ...grpc.CallOption) (Route_StreamClient, error)
 	// Get EUIs for a Route (auth delegate_keys/owner/admin)
 	GetEuis(ctx context.Context, in *RouteGetEuisReqV1, opts ...grpc.CallOption) (Route_GetEuisClient, error)
 	// Update (single add or remove) EUIs for a Route (auth
@@ -324,8 +368,12 @@ type RouteClient interface {
 	// Update (single add or remove) DevAddr Ranges for a Route (auth
 	// delegate_keys/owner/admin)
 	UpdateDevaddrRanges(ctx context.Context, opts ...grpc.CallOption) (Route_UpdateDevaddrRangesClient, error)
-	// Stream Routes update (auth admin only)
-	Stream(ctx context.Context, in *RouteStreamReqV1, opts ...grpc.CallOption) (Route_StreamClient, error)
+	// List Filters for a Route (auth delegate_keys/owner/admin)
+	ListSkfs(ctx context.Context, in *RouteSkfListReqV1, opts ...grpc.CallOption) (Route_ListSkfsClient, error)
+	// List Filters for a DevAddr (auth delegate_keys/owner/admin
+	GetSkfs(ctx context.Context, in *RouteSkfGetReqV1, opts ...grpc.CallOption) (Route_GetSkfsClient, error)
+	// Update Filters for an Org (auth delegate_keys/owner/admin)
+	UpdateSkfs(ctx context.Context, in *RouteSkfUpdateReqV1, opts ...grpc.CallOption) (*RouteSkfUpdateResV1, error)
 }
 
 type routeClient struct {
@@ -345,8 +393,8 @@ func (c *routeClient) List(ctx context.Context, in *RouteListReqV1, opts ...grpc
 	return out, nil
 }
 
-func (c *routeClient) Get(ctx context.Context, in *RouteGetReqV1, opts ...grpc.CallOption) (*RouteV1, error) {
-	out := new(RouteV1)
+func (c *routeClient) Get(ctx context.Context, in *RouteGetReqV1, opts ...grpc.CallOption) (*RouteResV1, error) {
+	out := new(RouteResV1)
 	err := c.cc.Invoke(ctx, "/helium.iot_config.route/get", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -354,8 +402,8 @@ func (c *routeClient) Get(ctx context.Context, in *RouteGetReqV1, opts ...grpc.C
 	return out, nil
 }
 
-func (c *routeClient) Create(ctx context.Context, in *RouteCreateReqV1, opts ...grpc.CallOption) (*RouteV1, error) {
-	out := new(RouteV1)
+func (c *routeClient) Create(ctx context.Context, in *RouteCreateReqV1, opts ...grpc.CallOption) (*RouteResV1, error) {
+	out := new(RouteResV1)
 	err := c.cc.Invoke(ctx, "/helium.iot_config.route/create", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -363,8 +411,8 @@ func (c *routeClient) Create(ctx context.Context, in *RouteCreateReqV1, opts ...
 	return out, nil
 }
 
-func (c *routeClient) Update(ctx context.Context, in *RouteUpdateReqV1, opts ...grpc.CallOption) (*RouteV1, error) {
-	out := new(RouteV1)
+func (c *routeClient) Update(ctx context.Context, in *RouteUpdateReqV1, opts ...grpc.CallOption) (*RouteResV1, error) {
+	out := new(RouteResV1)
 	err := c.cc.Invoke(ctx, "/helium.iot_config.route/update", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -372,8 +420,8 @@ func (c *routeClient) Update(ctx context.Context, in *RouteUpdateReqV1, opts ...
 	return out, nil
 }
 
-func (c *routeClient) Delete(ctx context.Context, in *RouteDeleteReqV1, opts ...grpc.CallOption) (*RouteV1, error) {
-	out := new(RouteV1)
+func (c *routeClient) Delete(ctx context.Context, in *RouteDeleteReqV1, opts ...grpc.CallOption) (*RouteResV1, error) {
+	out := new(RouteResV1)
 	err := c.cc.Invoke(ctx, "/helium.iot_config.route/delete", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -381,8 +429,40 @@ func (c *routeClient) Delete(ctx context.Context, in *RouteDeleteReqV1, opts ...
 	return out, nil
 }
 
+func (c *routeClient) Stream(ctx context.Context, in *RouteStreamReqV1, opts ...grpc.CallOption) (Route_StreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[0], "/helium.iot_config.route/stream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &routeStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Route_StreamClient interface {
+	Recv() (*RouteStreamResV1, error)
+	grpc.ClientStream
+}
+
+type routeStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *routeStreamClient) Recv() (*RouteStreamResV1, error) {
+	m := new(RouteStreamResV1)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *routeClient) GetEuis(ctx context.Context, in *RouteGetEuisReqV1, opts ...grpc.CallOption) (Route_GetEuisClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[0], "/helium.iot_config.route/get_euis", opts...)
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[1], "/helium.iot_config.route/get_euis", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +494,7 @@ func (x *routeGetEuisClient) Recv() (*EuiPairV1, error) {
 }
 
 func (c *routeClient) UpdateEuis(ctx context.Context, opts ...grpc.CallOption) (Route_UpdateEuisClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[1], "/helium.iot_config.route/update_euis", opts...)
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[2], "/helium.iot_config.route/update_euis", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +528,7 @@ func (x *routeUpdateEuisClient) CloseAndRecv() (*RouteEuisResV1, error) {
 }
 
 func (c *routeClient) GetDevaddrRanges(ctx context.Context, in *RouteGetDevaddrRangesReqV1, opts ...grpc.CallOption) (Route_GetDevaddrRangesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[2], "/helium.iot_config.route/get_devaddr_ranges", opts...)
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[3], "/helium.iot_config.route/get_devaddr_ranges", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +560,7 @@ func (x *routeGetDevaddrRangesClient) Recv() (*DevaddrRangeV1, error) {
 }
 
 func (c *routeClient) UpdateDevaddrRanges(ctx context.Context, opts ...grpc.CallOption) (Route_UpdateDevaddrRangesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[3], "/helium.iot_config.route/update_devaddr_ranges", opts...)
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[4], "/helium.iot_config.route/update_devaddr_ranges", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -513,12 +593,12 @@ func (x *routeUpdateDevaddrRangesClient) CloseAndRecv() (*RouteDevaddrRangesResV
 	return m, nil
 }
 
-func (c *routeClient) Stream(ctx context.Context, in *RouteStreamReqV1, opts ...grpc.CallOption) (Route_StreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[4], "/helium.iot_config.route/stream", opts...)
+func (c *routeClient) ListSkfs(ctx context.Context, in *RouteSkfListReqV1, opts ...grpc.CallOption) (Route_ListSkfsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[5], "/helium.iot_config.route/list_skfs", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &routeStreamClient{stream}
+	x := &routeListSkfsClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -528,21 +608,62 @@ func (c *routeClient) Stream(ctx context.Context, in *RouteStreamReqV1, opts ...
 	return x, nil
 }
 
-type Route_StreamClient interface {
-	Recv() (*RouteStreamResV1, error)
+type Route_ListSkfsClient interface {
+	Recv() (*SkfV1, error)
 	grpc.ClientStream
 }
 
-type routeStreamClient struct {
+type routeListSkfsClient struct {
 	grpc.ClientStream
 }
 
-func (x *routeStreamClient) Recv() (*RouteStreamResV1, error) {
-	m := new(RouteStreamResV1)
+func (x *routeListSkfsClient) Recv() (*SkfV1, error) {
+	m := new(SkfV1)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *routeClient) GetSkfs(ctx context.Context, in *RouteSkfGetReqV1, opts ...grpc.CallOption) (Route_GetSkfsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Route_ServiceDesc.Streams[6], "/helium.iot_config.route/get_skfs", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &routeGetSkfsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Route_GetSkfsClient interface {
+	Recv() (*SkfV1, error)
+	grpc.ClientStream
+}
+
+type routeGetSkfsClient struct {
+	grpc.ClientStream
+}
+
+func (x *routeGetSkfsClient) Recv() (*SkfV1, error) {
+	m := new(SkfV1)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *routeClient) UpdateSkfs(ctx context.Context, in *RouteSkfUpdateReqV1, opts ...grpc.CallOption) (*RouteSkfUpdateResV1, error) {
+	out := new(RouteSkfUpdateResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.route/update_skfs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // RouteServer is the server API for Route service.
@@ -552,13 +673,15 @@ type RouteServer interface {
 	// List Routes for an Org (auth delegate_keys/owner/admin)
 	List(context.Context, *RouteListReqV1) (*RouteListResV1, error)
 	// Get Route for an Org (auth delegate_keys/owner/admin)
-	Get(context.Context, *RouteGetReqV1) (*RouteV1, error)
+	Get(context.Context, *RouteGetReqV1) (*RouteResV1, error)
 	// Create Route for an Org (auth delegate_keys/owner/admin)
-	Create(context.Context, *RouteCreateReqV1) (*RouteV1, error)
+	Create(context.Context, *RouteCreateReqV1) (*RouteResV1, error)
 	// Update Route for an Org (auth delegate_keys/owner/admin)
-	Update(context.Context, *RouteUpdateReqV1) (*RouteV1, error)
+	Update(context.Context, *RouteUpdateReqV1) (*RouteResV1, error)
 	// Delete Route for an Org (auth delegate_keys/owner/admin)
-	Delete(context.Context, *RouteDeleteReqV1) (*RouteV1, error)
+	Delete(context.Context, *RouteDeleteReqV1) (*RouteResV1, error)
+	// Stream Routes update (auth admin only)
+	Stream(*RouteStreamReqV1, Route_StreamServer) error
 	// Get EUIs for a Route (auth delegate_keys/owner/admin)
 	GetEuis(*RouteGetEuisReqV1, Route_GetEuisServer) error
 	// Update (single add or remove) EUIs for a Route (auth
@@ -569,8 +692,12 @@ type RouteServer interface {
 	// Update (single add or remove) DevAddr Ranges for a Route (auth
 	// delegate_keys/owner/admin)
 	UpdateDevaddrRanges(Route_UpdateDevaddrRangesServer) error
-	// Stream Routes update (auth admin only)
-	Stream(*RouteStreamReqV1, Route_StreamServer) error
+	// List Filters for a Route (auth delegate_keys/owner/admin)
+	ListSkfs(*RouteSkfListReqV1, Route_ListSkfsServer) error
+	// List Filters for a DevAddr (auth delegate_keys/owner/admin
+	GetSkfs(*RouteSkfGetReqV1, Route_GetSkfsServer) error
+	// Update Filters for an Org (auth delegate_keys/owner/admin)
+	UpdateSkfs(context.Context, *RouteSkfUpdateReqV1) (*RouteSkfUpdateResV1, error)
 	mustEmbedUnimplementedRouteServer()
 }
 
@@ -581,17 +708,20 @@ type UnimplementedRouteServer struct {
 func (UnimplementedRouteServer) List(context.Context, *RouteListReqV1) (*RouteListResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedRouteServer) Get(context.Context, *RouteGetReqV1) (*RouteV1, error) {
+func (UnimplementedRouteServer) Get(context.Context, *RouteGetReqV1) (*RouteResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedRouteServer) Create(context.Context, *RouteCreateReqV1) (*RouteV1, error) {
+func (UnimplementedRouteServer) Create(context.Context, *RouteCreateReqV1) (*RouteResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedRouteServer) Update(context.Context, *RouteUpdateReqV1) (*RouteV1, error) {
+func (UnimplementedRouteServer) Update(context.Context, *RouteUpdateReqV1) (*RouteResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (UnimplementedRouteServer) Delete(context.Context, *RouteDeleteReqV1) (*RouteV1, error) {
+func (UnimplementedRouteServer) Delete(context.Context, *RouteDeleteReqV1) (*RouteResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedRouteServer) Stream(*RouteStreamReqV1, Route_StreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
 }
 func (UnimplementedRouteServer) GetEuis(*RouteGetEuisReqV1, Route_GetEuisServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetEuis not implemented")
@@ -605,8 +735,14 @@ func (UnimplementedRouteServer) GetDevaddrRanges(*RouteGetDevaddrRangesReqV1, Ro
 func (UnimplementedRouteServer) UpdateDevaddrRanges(Route_UpdateDevaddrRangesServer) error {
 	return status.Errorf(codes.Unimplemented, "method UpdateDevaddrRanges not implemented")
 }
-func (UnimplementedRouteServer) Stream(*RouteStreamReqV1, Route_StreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
+func (UnimplementedRouteServer) ListSkfs(*RouteSkfListReqV1, Route_ListSkfsServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListSkfs not implemented")
+}
+func (UnimplementedRouteServer) GetSkfs(*RouteSkfGetReqV1, Route_GetSkfsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetSkfs not implemented")
+}
+func (UnimplementedRouteServer) UpdateSkfs(context.Context, *RouteSkfUpdateReqV1) (*RouteSkfUpdateResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkfs not implemented")
 }
 func (UnimplementedRouteServer) mustEmbedUnimplementedRouteServer() {}
 
@@ -711,6 +847,27 @@ func _Route_Delete_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Route_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RouteStreamReqV1)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RouteServer).Stream(m, &routeStreamServer{stream})
+}
+
+type Route_StreamServer interface {
+	Send(*RouteStreamResV1) error
+	grpc.ServerStream
+}
+
+type routeStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *routeStreamServer) Send(m *RouteStreamResV1) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _Route_GetEuis_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(RouteGetEuisReqV1)
 	if err := stream.RecvMsg(m); err != nil {
@@ -805,25 +962,64 @@ func (x *routeUpdateDevaddrRangesServer) Recv() (*RouteUpdateDevaddrRangesReqV1,
 	return m, nil
 }
 
-func _Route_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(RouteStreamReqV1)
+func _Route_ListSkfs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RouteSkfListReqV1)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(RouteServer).Stream(m, &routeStreamServer{stream})
+	return srv.(RouteServer).ListSkfs(m, &routeListSkfsServer{stream})
 }
 
-type Route_StreamServer interface {
-	Send(*RouteStreamResV1) error
+type Route_ListSkfsServer interface {
+	Send(*SkfV1) error
 	grpc.ServerStream
 }
 
-type routeStreamServer struct {
+type routeListSkfsServer struct {
 	grpc.ServerStream
 }
 
-func (x *routeStreamServer) Send(m *RouteStreamResV1) error {
+func (x *routeListSkfsServer) Send(m *SkfV1) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func _Route_GetSkfs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RouteSkfGetReqV1)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RouteServer).GetSkfs(m, &routeGetSkfsServer{stream})
+}
+
+type Route_GetSkfsServer interface {
+	Send(*SkfV1) error
+	grpc.ServerStream
+}
+
+type routeGetSkfsServer struct {
+	grpc.ServerStream
+}
+
+func (x *routeGetSkfsServer) Send(m *SkfV1) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Route_UpdateSkfs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RouteSkfUpdateReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RouteServer).UpdateSkfs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.route/update_skfs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RouteServer).UpdateSkfs(ctx, req.(*RouteSkfUpdateReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 // Route_ServiceDesc is the grpc.ServiceDesc for Route service.
@@ -853,8 +1049,17 @@ var Route_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "delete",
 			Handler:    _Route_Delete_Handler,
 		},
+		{
+			MethodName: "update_skfs",
+			Handler:    _Route_UpdateSkfs_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "stream",
+			Handler:       _Route_Stream_Handler,
+			ServerStreams: true,
+		},
 		{
 			StreamName:    "get_euis",
 			Handler:       _Route_GetEuis_Handler,
@@ -876,325 +1081,13 @@ var Route_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 		{
-			StreamName:    "stream",
-			Handler:       _Route_Stream_Handler,
-			ServerStreams: true,
-		},
-	},
-	Metadata: "service/iot_config.proto",
-}
-
-// SessionKeyFilterClient is the client API for SessionKeyFilter service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type SessionKeyFilterClient interface {
-	// List Filters for an Org (auth delegate_keys/owner/admin)
-	List(ctx context.Context, in *SessionKeyFilterListReqV1, opts ...grpc.CallOption) (SessionKeyFilter_ListClient, error)
-	// List Filters for a DevAddr (auth delegate_keys/owner/admin
-	Get(ctx context.Context, in *SessionKeyFilterGetReqV1, opts ...grpc.CallOption) (SessionKeyFilter_GetClient, error)
-	// Update Filters for an Org (auth delegate_keys/owner/admin)
-	Update(ctx context.Context, opts ...grpc.CallOption) (SessionKeyFilter_UpdateClient, error)
-	// Stream Filter update (auth admin only)
-	Stream(ctx context.Context, in *SessionKeyFilterStreamReqV1, opts ...grpc.CallOption) (SessionKeyFilter_StreamClient, error)
-}
-
-type sessionKeyFilterClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewSessionKeyFilterClient(cc grpc.ClientConnInterface) SessionKeyFilterClient {
-	return &sessionKeyFilterClient{cc}
-}
-
-func (c *sessionKeyFilterClient) List(ctx context.Context, in *SessionKeyFilterListReqV1, opts ...grpc.CallOption) (SessionKeyFilter_ListClient, error) {
-	stream, err := c.cc.NewStream(ctx, &SessionKeyFilter_ServiceDesc.Streams[0], "/helium.iot_config.session_key_filter/list", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &sessionKeyFilterListClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type SessionKeyFilter_ListClient interface {
-	Recv() (*SessionKeyFilterV1, error)
-	grpc.ClientStream
-}
-
-type sessionKeyFilterListClient struct {
-	grpc.ClientStream
-}
-
-func (x *sessionKeyFilterListClient) Recv() (*SessionKeyFilterV1, error) {
-	m := new(SessionKeyFilterV1)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *sessionKeyFilterClient) Get(ctx context.Context, in *SessionKeyFilterGetReqV1, opts ...grpc.CallOption) (SessionKeyFilter_GetClient, error) {
-	stream, err := c.cc.NewStream(ctx, &SessionKeyFilter_ServiceDesc.Streams[1], "/helium.iot_config.session_key_filter/get", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &sessionKeyFilterGetClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type SessionKeyFilter_GetClient interface {
-	Recv() (*SessionKeyFilterV1, error)
-	grpc.ClientStream
-}
-
-type sessionKeyFilterGetClient struct {
-	grpc.ClientStream
-}
-
-func (x *sessionKeyFilterGetClient) Recv() (*SessionKeyFilterV1, error) {
-	m := new(SessionKeyFilterV1)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *sessionKeyFilterClient) Update(ctx context.Context, opts ...grpc.CallOption) (SessionKeyFilter_UpdateClient, error) {
-	stream, err := c.cc.NewStream(ctx, &SessionKeyFilter_ServiceDesc.Streams[2], "/helium.iot_config.session_key_filter/update", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &sessionKeyFilterUpdateClient{stream}
-	return x, nil
-}
-
-type SessionKeyFilter_UpdateClient interface {
-	Send(*SessionKeyFilterUpdateReqV1) error
-	CloseAndRecv() (*SessionKeyFilterUpdateResV1, error)
-	grpc.ClientStream
-}
-
-type sessionKeyFilterUpdateClient struct {
-	grpc.ClientStream
-}
-
-func (x *sessionKeyFilterUpdateClient) Send(m *SessionKeyFilterUpdateReqV1) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *sessionKeyFilterUpdateClient) CloseAndRecv() (*SessionKeyFilterUpdateResV1, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	m := new(SessionKeyFilterUpdateResV1)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *sessionKeyFilterClient) Stream(ctx context.Context, in *SessionKeyFilterStreamReqV1, opts ...grpc.CallOption) (SessionKeyFilter_StreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &SessionKeyFilter_ServiceDesc.Streams[3], "/helium.iot_config.session_key_filter/stream", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &sessionKeyFilterStreamClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type SessionKeyFilter_StreamClient interface {
-	Recv() (*SessionKeyFilterStreamResV1, error)
-	grpc.ClientStream
-}
-
-type sessionKeyFilterStreamClient struct {
-	grpc.ClientStream
-}
-
-func (x *sessionKeyFilterStreamClient) Recv() (*SessionKeyFilterStreamResV1, error) {
-	m := new(SessionKeyFilterStreamResV1)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// SessionKeyFilterServer is the server API for SessionKeyFilter service.
-// All implementations must embed UnimplementedSessionKeyFilterServer
-// for forward compatibility
-type SessionKeyFilterServer interface {
-	// List Filters for an Org (auth delegate_keys/owner/admin)
-	List(*SessionKeyFilterListReqV1, SessionKeyFilter_ListServer) error
-	// List Filters for a DevAddr (auth delegate_keys/owner/admin
-	Get(*SessionKeyFilterGetReqV1, SessionKeyFilter_GetServer) error
-	// Update Filters for an Org (auth delegate_keys/owner/admin)
-	Update(SessionKeyFilter_UpdateServer) error
-	// Stream Filter update (auth admin only)
-	Stream(*SessionKeyFilterStreamReqV1, SessionKeyFilter_StreamServer) error
-	mustEmbedUnimplementedSessionKeyFilterServer()
-}
-
-// UnimplementedSessionKeyFilterServer must be embedded to have forward compatible implementations.
-type UnimplementedSessionKeyFilterServer struct {
-}
-
-func (UnimplementedSessionKeyFilterServer) List(*SessionKeyFilterListReqV1, SessionKeyFilter_ListServer) error {
-	return status.Errorf(codes.Unimplemented, "method List not implemented")
-}
-func (UnimplementedSessionKeyFilterServer) Get(*SessionKeyFilterGetReqV1, SessionKeyFilter_GetServer) error {
-	return status.Errorf(codes.Unimplemented, "method Get not implemented")
-}
-func (UnimplementedSessionKeyFilterServer) Update(SessionKeyFilter_UpdateServer) error {
-	return status.Errorf(codes.Unimplemented, "method Update not implemented")
-}
-func (UnimplementedSessionKeyFilterServer) Stream(*SessionKeyFilterStreamReqV1, SessionKeyFilter_StreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
-}
-func (UnimplementedSessionKeyFilterServer) mustEmbedUnimplementedSessionKeyFilterServer() {}
-
-// UnsafeSessionKeyFilterServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to SessionKeyFilterServer will
-// result in compilation errors.
-type UnsafeSessionKeyFilterServer interface {
-	mustEmbedUnimplementedSessionKeyFilterServer()
-}
-
-func RegisterSessionKeyFilterServer(s grpc.ServiceRegistrar, srv SessionKeyFilterServer) {
-	s.RegisterService(&SessionKeyFilter_ServiceDesc, srv)
-}
-
-func _SessionKeyFilter_List_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SessionKeyFilterListReqV1)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(SessionKeyFilterServer).List(m, &sessionKeyFilterListServer{stream})
-}
-
-type SessionKeyFilter_ListServer interface {
-	Send(*SessionKeyFilterV1) error
-	grpc.ServerStream
-}
-
-type sessionKeyFilterListServer struct {
-	grpc.ServerStream
-}
-
-func (x *sessionKeyFilterListServer) Send(m *SessionKeyFilterV1) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _SessionKeyFilter_Get_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SessionKeyFilterGetReqV1)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(SessionKeyFilterServer).Get(m, &sessionKeyFilterGetServer{stream})
-}
-
-type SessionKeyFilter_GetServer interface {
-	Send(*SessionKeyFilterV1) error
-	grpc.ServerStream
-}
-
-type sessionKeyFilterGetServer struct {
-	grpc.ServerStream
-}
-
-func (x *sessionKeyFilterGetServer) Send(m *SessionKeyFilterV1) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _SessionKeyFilter_Update_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SessionKeyFilterServer).Update(&sessionKeyFilterUpdateServer{stream})
-}
-
-type SessionKeyFilter_UpdateServer interface {
-	SendAndClose(*SessionKeyFilterUpdateResV1) error
-	Recv() (*SessionKeyFilterUpdateReqV1, error)
-	grpc.ServerStream
-}
-
-type sessionKeyFilterUpdateServer struct {
-	grpc.ServerStream
-}
-
-func (x *sessionKeyFilterUpdateServer) SendAndClose(m *SessionKeyFilterUpdateResV1) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *sessionKeyFilterUpdateServer) Recv() (*SessionKeyFilterUpdateReqV1, error) {
-	m := new(SessionKeyFilterUpdateReqV1)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func _SessionKeyFilter_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SessionKeyFilterStreamReqV1)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(SessionKeyFilterServer).Stream(m, &sessionKeyFilterStreamServer{stream})
-}
-
-type SessionKeyFilter_StreamServer interface {
-	Send(*SessionKeyFilterStreamResV1) error
-	grpc.ServerStream
-}
-
-type sessionKeyFilterStreamServer struct {
-	grpc.ServerStream
-}
-
-func (x *sessionKeyFilterStreamServer) Send(m *SessionKeyFilterStreamResV1) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-// SessionKeyFilter_ServiceDesc is the grpc.ServiceDesc for SessionKeyFilter service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var SessionKeyFilter_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "helium.iot_config.session_key_filter",
-	HandlerType: (*SessionKeyFilterServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "list",
-			Handler:       _SessionKeyFilter_List_Handler,
+			StreamName:    "list_skfs",
+			Handler:       _Route_ListSkfs_Handler,
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "get",
-			Handler:       _SessionKeyFilter_Get_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "update",
-			Handler:       _SessionKeyFilter_Update_Handler,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "stream",
-			Handler:       _SessionKeyFilter_Stream_Handler,
+			StreamName:    "get_skfs",
+			Handler:       _Route_GetSkfs_Handler,
 			ServerStreams: true,
 		},
 	},
@@ -1210,6 +1103,10 @@ type GatewayClient interface {
 	RegionParams(ctx context.Context, in *GatewayRegionParamsReqV1, opts ...grpc.CallOption) (*GatewayRegionParamsResV1, error)
 	// Get H3 Location for a gateway (auth admin only)
 	Location(ctx context.Context, in *GatewayLocationReqV1, opts ...grpc.CallOption) (*GatewayLocationResV1, error)
+	// Get info for the specified gateway
+	Info(ctx context.Context, in *GatewayInfoReqV1, opts ...grpc.CallOption) (*GatewayInfoResV1, error)
+	// Get a stream of gateway info
+	InfoStream(ctx context.Context, in *GatewayInfoStreamReqV1, opts ...grpc.CallOption) (Gateway_InfoStreamClient, error)
 }
 
 type gatewayClient struct {
@@ -1238,6 +1135,47 @@ func (c *gatewayClient) Location(ctx context.Context, in *GatewayLocationReqV1, 
 	return out, nil
 }
 
+func (c *gatewayClient) Info(ctx context.Context, in *GatewayInfoReqV1, opts ...grpc.CallOption) (*GatewayInfoResV1, error) {
+	out := new(GatewayInfoResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.gateway/info", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayClient) InfoStream(ctx context.Context, in *GatewayInfoStreamReqV1, opts ...grpc.CallOption) (Gateway_InfoStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Gateway_ServiceDesc.Streams[0], "/helium.iot_config.gateway/info_stream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &gatewayInfoStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Gateway_InfoStreamClient interface {
+	Recv() (*GatewayInfoStreamResV1, error)
+	grpc.ClientStream
+}
+
+type gatewayInfoStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *gatewayInfoStreamClient) Recv() (*GatewayInfoStreamResV1, error) {
+	m := new(GatewayInfoStreamResV1)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // GatewayServer is the server API for Gateway service.
 // All implementations must embed UnimplementedGatewayServer
 // for forward compatibility
@@ -1247,6 +1185,10 @@ type GatewayServer interface {
 	RegionParams(context.Context, *GatewayRegionParamsReqV1) (*GatewayRegionParamsResV1, error)
 	// Get H3 Location for a gateway (auth admin only)
 	Location(context.Context, *GatewayLocationReqV1) (*GatewayLocationResV1, error)
+	// Get info for the specified gateway
+	Info(context.Context, *GatewayInfoReqV1) (*GatewayInfoResV1, error)
+	// Get a stream of gateway info
+	InfoStream(*GatewayInfoStreamReqV1, Gateway_InfoStreamServer) error
 	mustEmbedUnimplementedGatewayServer()
 }
 
@@ -1259,6 +1201,12 @@ func (UnimplementedGatewayServer) RegionParams(context.Context, *GatewayRegionPa
 }
 func (UnimplementedGatewayServer) Location(context.Context, *GatewayLocationReqV1) (*GatewayLocationResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Location not implemented")
+}
+func (UnimplementedGatewayServer) Info(context.Context, *GatewayInfoReqV1) (*GatewayInfoResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
+}
+func (UnimplementedGatewayServer) InfoStream(*GatewayInfoStreamReqV1, Gateway_InfoStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method InfoStream not implemented")
 }
 func (UnimplementedGatewayServer) mustEmbedUnimplementedGatewayServer() {}
 
@@ -1309,6 +1257,45 @@ func _Gateway_Location_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gateway_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayInfoReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServer).Info(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.gateway/info",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServer).Info(ctx, req.(*GatewayInfoReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Gateway_InfoStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GatewayInfoStreamReqV1)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(GatewayServer).InfoStream(m, &gatewayInfoStreamServer{stream})
+}
+
+type Gateway_InfoStreamServer interface {
+	Send(*GatewayInfoStreamResV1) error
+	grpc.ServerStream
+}
+
+type gatewayInfoStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *gatewayInfoStreamServer) Send(m *GatewayInfoStreamResV1) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // Gateway_ServiceDesc is the grpc.ServiceDesc for Gateway service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1324,8 +1311,18 @@ var Gateway_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "location",
 			Handler:    _Gateway_Location_Handler,
 		},
+		{
+			MethodName: "info",
+			Handler:    _Gateway_Info_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "info_stream",
+			Handler:       _Gateway_InfoStream_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "service/iot_config.proto",
 }
 
@@ -1340,6 +1337,8 @@ type AdminClient interface {
 	// Load params and cell indexes for a region into the config service (auth
 	// admin only)
 	LoadRegion(ctx context.Context, in *AdminLoadRegionReqV1, opts ...grpc.CallOption) (*AdminLoadRegionResV1, error)
+	// Return the region params for the specified region
+	RegionParams(ctx context.Context, in *RegionParamsReqV1, opts ...grpc.CallOption) (*RegionParamsResV1, error)
 }
 
 type adminClient struct {
@@ -1377,6 +1376,15 @@ func (c *adminClient) LoadRegion(ctx context.Context, in *AdminLoadRegionReqV1, 
 	return out, nil
 }
 
+func (c *adminClient) RegionParams(ctx context.Context, in *RegionParamsReqV1, opts ...grpc.CallOption) (*RegionParamsResV1, error) {
+	out := new(RegionParamsResV1)
+	err := c.cc.Invoke(ctx, "/helium.iot_config.admin/region_params", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServer is the server API for Admin service.
 // All implementations must embed UnimplementedAdminServer
 // for forward compatibility
@@ -1388,6 +1396,8 @@ type AdminServer interface {
 	// Load params and cell indexes for a region into the config service (auth
 	// admin only)
 	LoadRegion(context.Context, *AdminLoadRegionReqV1) (*AdminLoadRegionResV1, error)
+	// Return the region params for the specified region
+	RegionParams(context.Context, *RegionParamsReqV1) (*RegionParamsResV1, error)
 	mustEmbedUnimplementedAdminServer()
 }
 
@@ -1403,6 +1413,9 @@ func (UnimplementedAdminServer) RemoveKey(context.Context, *AdminRemoveKeyReqV1)
 }
 func (UnimplementedAdminServer) LoadRegion(context.Context, *AdminLoadRegionReqV1) (*AdminLoadRegionResV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoadRegion not implemented")
+}
+func (UnimplementedAdminServer) RegionParams(context.Context, *RegionParamsReqV1) (*RegionParamsResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegionParams not implemented")
 }
 func (UnimplementedAdminServer) mustEmbedUnimplementedAdminServer() {}
 
@@ -1471,6 +1484,24 @@ func _Admin_LoadRegion_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Admin_RegionParams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegionParamsReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).RegionParams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.iot_config.admin/region_params",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).RegionParams(ctx, req.(*RegionParamsReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Admin_ServiceDesc is the grpc.ServiceDesc for Admin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1489,6 +1520,10 @@ var Admin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "load_region",
 			Handler:    _Admin_LoadRegion_Handler,
+		},
+		{
+			MethodName: "region_params",
+			Handler:    _Admin_RegionParams_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

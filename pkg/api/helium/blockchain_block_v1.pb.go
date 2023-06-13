@@ -139,7 +139,7 @@ type BlockchainBlockV1 struct {
 	Height           uint64                   `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
 	Time             uint64                   `protobuf:"varint,3,opt,name=time,proto3" json:"time,omitempty"`
 	HbbftRound       uint64                   `protobuf:"varint,4,opt,name=hbbft_round,json=hbbftRound,proto3" json:"hbbft_round,omitempty"`
-	Transactions     []*BlockchainTxn         `protobuf:"bytes,5,rep,name=transactions,proto3" json:"transactions,omitempty"` //TODO: needs fix orig: repeated blockchain_txn transactions = 5;
+	Transactions     []*BlockchainTxn         `protobuf:"bytes,5,rep,name=transactions,proto3" json:"transactions,omitempty"` //TODO: needed to add helium namespace
 	Signatures       []*BlockchainSignatureV1 `protobuf:"bytes,6,rep,name=signatures,proto3" json:"signatures,omitempty"`
 	ElectionEpoch    uint64                   `protobuf:"varint,7,opt,name=election_epoch,json=electionEpoch,proto3" json:"election_epoch,omitempty"`
 	EpochStart       uint64                   `protobuf:"varint,8,opt,name=epoch_start,json=epochStart,proto3" json:"epoch_start,omitempty"`

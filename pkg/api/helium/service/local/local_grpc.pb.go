@@ -23,8 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ApiClient interface {
 	Pubkey(ctx context.Context, in *PubkeyReq, opts ...grpc.CallOption) (*PubkeyRes, error)
-	Sign(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*SignRes, error)
 	Region(ctx context.Context, in *RegionReq, opts ...grpc.CallOption) (*RegionRes, error)
+	Router(ctx context.Context, in *RouterReq, opts ...grpc.CallOption) (*RouterRes, error)
 	AddGateway(ctx context.Context, in *AddGatewayReq, opts ...grpc.CallOption) (*AddGatewayRes, error)
 }
 
@@ -45,18 +45,18 @@ func (c *apiClient) Pubkey(ctx context.Context, in *PubkeyReq, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *apiClient) Sign(ctx context.Context, in *SignReq, opts ...grpc.CallOption) (*SignRes, error) {
-	out := new(SignRes)
-	err := c.cc.Invoke(ctx, "/helium.local.api/sign", in, out, opts...)
+func (c *apiClient) Region(ctx context.Context, in *RegionReq, opts ...grpc.CallOption) (*RegionRes, error) {
+	out := new(RegionRes)
+	err := c.cc.Invoke(ctx, "/helium.local.api/region", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *apiClient) Region(ctx context.Context, in *RegionReq, opts ...grpc.CallOption) (*RegionRes, error) {
-	out := new(RegionRes)
-	err := c.cc.Invoke(ctx, "/helium.local.api/region", in, out, opts...)
+func (c *apiClient) Router(ctx context.Context, in *RouterReq, opts ...grpc.CallOption) (*RouterRes, error) {
+	out := new(RouterRes)
+	err := c.cc.Invoke(ctx, "/helium.local.api/router", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +77,8 @@ func (c *apiClient) AddGateway(ctx context.Context, in *AddGatewayReq, opts ...g
 // for forward compatibility
 type ApiServer interface {
 	Pubkey(context.Context, *PubkeyReq) (*PubkeyRes, error)
-	Sign(context.Context, *SignReq) (*SignRes, error)
 	Region(context.Context, *RegionReq) (*RegionRes, error)
+	Router(context.Context, *RouterReq) (*RouterRes, error)
 	AddGateway(context.Context, *AddGatewayReq) (*AddGatewayRes, error)
 	mustEmbedUnimplementedApiServer()
 }
@@ -90,11 +90,11 @@ type UnimplementedApiServer struct {
 func (UnimplementedApiServer) Pubkey(context.Context, *PubkeyReq) (*PubkeyRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Pubkey not implemented")
 }
-func (UnimplementedApiServer) Sign(context.Context, *SignReq) (*SignRes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
-}
 func (UnimplementedApiServer) Region(context.Context, *RegionReq) (*RegionRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Region not implemented")
+}
+func (UnimplementedApiServer) Router(context.Context, *RouterReq) (*RouterRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Router not implemented")
 }
 func (UnimplementedApiServer) AddGateway(context.Context, *AddGatewayReq) (*AddGatewayRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddGateway not implemented")
@@ -130,24 +130,6 @@ func _Api_Pubkey_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Api_Sign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ApiServer).Sign(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/helium.local.api/sign",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApiServer).Sign(ctx, req.(*SignReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Api_Region_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RegionReq)
 	if err := dec(in); err != nil {
@@ -162,6 +144,24 @@ func _Api_Region_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ApiServer).Region(ctx, req.(*RegionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Api_Router_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RouterReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApiServer).Router(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.local.api/router",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApiServer).Router(ctx, req.(*RouterReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -196,12 +196,12 @@ var Api_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Api_Pubkey_Handler,
 		},
 		{
-			MethodName: "sign",
-			Handler:    _Api_Sign_Handler,
-		},
-		{
 			MethodName: "region",
 			Handler:    _Api_Region_Handler,
+		},
+		{
+			MethodName: "router",
+			Handler:    _Api_Router_Handler,
 		},
 		{
 			MethodName: "add_gateway",

@@ -11,8 +11,12 @@ import "region.proto";
 
 // == Field Notes ==
 //
-// - Every message including `signature` will need to be signed over the all
-//    message, with the `signature` field set to an empty value.
+// - Every message including `signature` will need to be signed over the
+//   entire message, with the `signature` field set to an empty value.
+//   Request messages are signed by the caller to allow the config service
+//   to authenticate them against known public keys and response messages
+//   are signed by the config service to allow the recipient to validate
+//   the authenticity of the data returned.
 //
 // - Every `timestamp` is in milliseconds since unix epoch
 //
@@ -95,6 +99,8 @@ message protocol_http_roaming_v1 {
   string path = 3;
   // Authorization Header
   string auth_header = 4;
+  // Receiver NSID
+  string receiver_nsid = 5;
 }
 
 // Server Route definition
@@ -132,19 +138,37 @@ message route_v1 {
 
 message org_list_req_v1 {}
 
-message org_list_res_v1 { repeated org_v1 orgs = 1; }
+message org_list_res_v1 {
+  repeated org_v1 orgs = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+  // Signature over the response by the config service
+  bytes signature = 4;
+}
 
 message org_get_req_v1 { uint64 oui = 1; }
 
 message org_create_helium_req_v1 {
+  enum helium_net_id {
+    type0_0x00003c = 0;
+    type3_0x60002d = 1;
+    type6_0xc00053 = 2;
+  }
+
   bytes owner = 1;
   bytes payer = 2;
   // Number of device address needed
+  // Even number required, minimum of 8
   uint64 devaddrs = 3;
   // in milliseconds since unix epoch
   uint64 timestamp = 4;
   bytes signature = 5;
   repeated bytes delegate_keys = 6;
+  // pubkey binary of the signing keypair
+  bytes signer = 7;
+  helium_net_id net_id = 8;
 }
 
 message org_create_roamer_req_v1 {
@@ -155,12 +179,50 @@ message org_create_roamer_req_v1 {
   uint64 timestamp = 4;
   bytes signature = 5;
   repeated bytes delegate_keys = 6;
+  // pubkey binary of the signing keypair
+  bytes signer = 7;
+}
+
+message org_update_req_v1 {
+  message delegate_key_update_v1 {
+    bytes delegate_key = 1;
+    action_v1 action = 2;
+  }
+
+  message devaddr_constraint_update_v1 {
+    devaddr_constraint_v1 constraint = 1;
+    action_v1 action = 2;
+  }
+
+  message update_v1 {
+    oneof update {
+      bytes owner = 1;
+      bytes payer = 2;
+      delegate_key_update_v1 delegate_key = 3;
+      // count of devaddrs to add, in even numbers
+      uint64 devaddrs = 4;
+      // devaddr constraints to explicitly add or remove
+      devaddr_constraint_update_v1 constraint = 5;
+    }
+  }
+
+  uint64 oui = 1;
+  repeated update_v1 updates = 2;
+  uint64 timestamp = 3;
+  bytes signer = 4;
+  bytes signature = 5;
 }
 
 message org_res_v1 {
   org_v1 org = 1;
   uint32 net_id = 2;
   repeated devaddr_constraint_v1 devaddr_constraints = 3;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
+  // Signature over the response by the config service
+  bytes signature = 6;
 }
 
 message org_disable_req_v1 {
@@ -168,33 +230,65 @@ message org_disable_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
-message org_disable_res_v1 { uint64 oui = 1; }
+message org_disable_res_v1 {
+  uint64 oui = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+  // Signature over the response by the config service
+  bytes signature = 4;
+}
 
 message org_enable_req_v1 {
   uint64 oui = 1;
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
-message org_enable_res_v1 { uint64 oui = 1; }
+message org_enable_res_v1 {
+  uint64 oui = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+  // Signature over the response by the config service
+  bytes signature = 4;
+}
 
 message route_list_req_v1 {
   uint64 oui = 1;
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
-message route_list_res_v1 { repeated route_v1 routes = 1; }
+message route_list_res_v1 {
+  repeated route_v1 routes = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+  // Signature over the response by the config service
+  bytes signature = 4;
+}
 
 message route_get_req_v1 {
   string id = 1;
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
 message route_create_req_v1 {
@@ -203,6 +297,8 @@ message route_create_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 3;
   bytes signature = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
 }
 
 message route_update_req_v1 {
@@ -210,6 +306,8 @@ message route_update_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
 message route_delete_req_v1 {
@@ -217,6 +315,18 @@ message route_delete_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
+}
+
+message route_res_v1 {
+  route_v1 route = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+  // Signature over the response by the config service
+  bytes signature = 4;
 }
 
 message route_get_euis_req_v1 {
@@ -224,6 +334,8 @@ message route_get_euis_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
 message route_update_euis_req_v1 {
@@ -232,15 +344,26 @@ message route_update_euis_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 3;
   bytes signature = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
 }
 
-message route_euis_res_v1 {}
+message route_euis_res_v1 {
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 1;
+  // pubkey binary of the signing keypair
+  bytes signer = 2;
+  // Signature over the response by the config service
+  bytes signature = 3;
+}
 
 message route_get_devaddr_ranges_req_v1 {
   string route_id = 1;
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
 message route_update_devaddr_ranges_req_v1 {
@@ -249,65 +372,94 @@ message route_update_devaddr_ranges_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 3;
   bytes signature = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
 }
 
-message route_devaddr_ranges_res_v1 {}
+message route_devaddr_ranges_res_v1 {
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 1;
+  // pubkey binary of the signing keypair
+  bytes signer = 2;
+  // Signature over the response by the config service
+  bytes signature = 3;
+}
 
 message route_stream_req_v1 {
   // in milliseconds since unix epoch
   uint64 timestamp = 1;
   bytes signature = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
 }
 
 message route_stream_res_v1 {
-  action_v1 action = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 1;
+  // pubkey binary of the signing keypair
+  bytes signer = 2;
+  // Signature over the response by the config service
+  bytes signature = 3;
+  action_v1 action = 4;
   oneof data {
-    route_v1 route = 2;
-    eui_pair_v1 eui_pair = 3;
-    devaddr_range_v1 devaddr_range = 4;
+    route_v1 route = 5;
+    eui_pair_v1 eui_pair = 6;
+    devaddr_range_v1 devaddr_range = 7;
+    skf_v1 skf = 8;
   }
 }
 
-message session_key_filter_v1 {
-  uint64 oui = 1;
+message skf_v1 {
+  string route_id = 1;
   uint32 devaddr = 2;
-  bytes session_key = 3;
+  // the hex-encoded string of the binary session key
+  string session_key = 3;
 }
 
-message session_key_filter_list_req_v1 {
-  uint64 oui = 1;
+message route_skf_list_req_v1 {
+  string route_id = 1;
   // in milliseconds since unix epoch
   uint64 timestamp = 2;
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
-message session_key_filter_get_req_v1 {
-  uint64 oui = 1;
+message route_skf_get_req_v1 {
+  string route_id = 1;
   uint32 devaddr = 2;
   // in milliseconds since unix epoch
   uint64 timestamp = 3;
   bytes signature = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
 }
 
-message session_key_filter_update_req_v1 {
-  action_v1 action = 1;
-  session_key_filter_v1 filter = 2;
+message route_skf_update_req_v1 {
+  message route_skf_update_v1 {
+    uint32 devaddr = 1;
+    // the hex-encoded string of the binary session key
+    string session_key = 2;
+    action_v1 action = 3;
+  }
+
+  string route_id = 1;
+  // WARNING: this will limited to 100 updates per req
+  repeated route_skf_update_v1 updates = 2;
   // in milliseconds since unix epoch
   uint64 timestamp = 3;
   bytes signature = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
 }
 
-message session_key_filter_update_res_v1 {}
-
-message session_key_filter_stream_req_v1 {
-  // in milliseconds since unix epoch
+message route_skf_update_res_v1 {
+  // unix epoch timestamp in seconds
   uint64 timestamp = 1;
-  bytes signature = 2;
-}
-
-message session_key_filter_stream_res_v1 {
-  action_v1 action = 1;
-  session_key_filter_v1 filter = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 2;
+  // Signature over the response by the config service
+  bytes signature = 3;
 }
 
 message gateway_region_params_req_v1 {
@@ -320,15 +472,30 @@ message gateway_region_params_res_v1 {
   region region = 1;
   blockchain_region_params_v1 params = 2;
   uint64 gain = 3;
+  // Signature over the response by the config service
   bytes signature = 4;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 5;
+  // pubkey binary of the signing keypair
+  bytes signer = 6;
 }
 
 message gateway_location_req_v1 {
   bytes gateway = 1;
   bytes signature = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
 }
 
-message gateway_location_res_v1 { string location = 1; }
+message gateway_location_res_v1 {
+  string location = 1;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+  // Signature over the response by the config service
+  bytes signature = 4;
+}
 
 message admin_load_region_req_v1 {
   region region = 1;
@@ -337,9 +504,18 @@ message admin_load_region_req_v1 {
   // indexes
   bytes hex_indexes = 3;
   bytes signature = 4;
+  // pubkey binary of the signing keypair
+  bytes signer = 5;
 }
 
-message admin_load_region_res_v1 {}
+message admin_load_region_res_v1 {
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 1;
+  // pubkey binary of the signing keypair
+  bytes signer = 2;
+  // Signature over the response by the config service
+  bytes signature = 3;
+}
 
 message admin_add_key_req_v1 {
   enum key_type_v1 {
@@ -347,6 +523,8 @@ message admin_add_key_req_v1 {
     administrator = 0;
     // packet routing infrastructure key for routing streams
     packet_router = 1;
+    // keys for verifying requests from other oracles
+    oracle = 2;
   }
 
   bytes pubkey = 1;
@@ -354,6 +532,8 @@ message admin_add_key_req_v1 {
   // Signature of the request message signed by an admin key
   // already registered to the config service
   bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
 }
 
 message admin_remove_key_req_v1 {
@@ -361,9 +541,99 @@ message admin_remove_key_req_v1 {
   // Signature of the request message signed by an admin key
   // already registered to the config service
   bytes signature = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
 }
 
-message admin_key_res_v1 {}
+message admin_key_res_v1 {
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 1;
+  // pubkey binary of the signing keypair
+  bytes signer = 2;
+  // Signature over the response by the config service
+  bytes signature = 3;
+}
+
+message gateway_metadata {
+  /// The asserted h3 location of the gateway
+  string location = 1;
+  /// LoRa region derived from the asserted location
+  region region = 2;
+  /// the transmit gain value of the gateway in dbi x 10
+  /// For example 1 dbi = 10, 15 dbi = 150
+  int32 gain = 3;
+  /// The asserted elevation of the gateway
+  int32 elevation = 4;
+}
+
+message gateway_info {
+  // The public key binary address and on-chain identity of the gateway
+  bytes address = 1;
+  // Whether or not the hotspot participates in PoC or only transfers data
+  bool is_full_hotspot = 2;
+  // The gateway's metadata as recorded on the blockchain
+  gateway_metadata metadata = 3;
+}
+
+/// Look up the details of a given hotspot public key
+message gateway_info_req_v1 {
+  /// The pubkey_bin address of the gateway to look up
+  bytes address = 1;
+  /// sig from a key known to the config service
+  bytes signature = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+}
+
+message gateway_info_res_v1 {
+  /// Timestamp of response
+  uint64 timestamp = 1;
+  gateway_info info = 2;
+  /// sig from the config service
+  bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
+}
+
+/// Request a stream of all active gateways
+message gateway_info_stream_req_v1 {
+  uint32 batch_size = 1;
+  /// sig from a key known to the config service
+  bytes signature = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+}
+
+/// Active gateway info streaming response containing a batch of gateways
+message gateway_info_stream_res_v1 {
+  /// Timestamp of response
+  uint64 timestamp = 1;
+  /// batch of gateways
+  repeated gateway_info gateways = 2;
+  /// sig from the config service
+  bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
+}
+
+message region_params_req_v1 {
+  region region = 1;
+  /// sig from a key known to the config service
+  bytes signature = 2;
+  // pubkey binary of the signing keypair
+  bytes signer = 3;
+}
+
+message region_params_res_v1 {
+  region region = 1;
+  blockchain_region_params_v1 params = 2;
+  /// sig from the config service
+  bytes signature = 3;
+  // pubkey binary of the signing keypair
+  bytes signer = 4;
+  // unix epoch timestamp in seconds
+  uint64 timestamp = 5;
+}
 
 // ------------------------------------------------------------------
 // Service Definitions
@@ -378,6 +648,10 @@ service org {
   rpc create_helium(org_create_helium_req_v1) returns (org_res_v1);
   // Create Org on any network (auth admin only)
   rpc create_roamer(org_create_roamer_req_v1) returns (org_res_v1);
+  // Update any Org (Helium or Roaming)
+  // Modify payer and add/remove delegate keys (owner/admin)
+  // Modify owner and add/remove devaddr constraints (auth admin only)
+  rpc update(org_update_req_v1) returns (org_res_v1);
   // Disable an org, this sends a stream route delete update to HPR
   // for all associated routes (auth admin only)
   rpc disable(org_disable_req_v1) returns (org_disable_res_v1);
@@ -390,20 +664,26 @@ service route {
   // List Routes for an Org (auth delegate_keys/owner/admin)
   rpc list(route_list_req_v1) returns (route_list_res_v1);
   // Get Route for an Org (auth delegate_keys/owner/admin)
-  rpc get(route_get_req_v1) returns (route_v1);
+  rpc get(route_get_req_v1) returns (route_res_v1);
   // Create Route for an Org (auth delegate_keys/owner/admin)
-  rpc create(route_create_req_v1) returns (route_v1);
-
+  rpc create(route_create_req_v1) returns (route_res_v1);
   // Update Route for an Org (auth delegate_keys/owner/admin)
-  rpc update(route_update_req_v1) returns (route_v1);
+  rpc update(route_update_req_v1) returns (route_res_v1);
   // Delete Route for an Org (auth delegate_keys/owner/admin)
-  rpc delete (route_delete_req_v1) returns (route_v1);
+  rpc delete (route_delete_req_v1) returns (route_res_v1);
+
+  // Stream Routes update (auth admin only)
+  rpc stream(route_stream_req_v1) returns (stream route_stream_res_v1);
+
+  // EUIs
 
   // Get EUIs for a Route (auth delegate_keys/owner/admin)
   rpc get_euis(route_get_euis_req_v1) returns (stream eui_pair_v1);
   // Update (single add or remove) EUIs for a Route (auth
   // delegate_keys/owner/admin)
   rpc update_euis(stream route_update_euis_req_v1) returns (route_euis_res_v1);
+
+  // DevAddr Ranges
 
   // Get DevAddr Ranges for a Route (auth delegate_keys/owner/admin)
   rpc get_devaddr_ranges(route_get_devaddr_ranges_req_v1)
@@ -413,22 +693,14 @@ service route {
   rpc update_devaddr_ranges(stream route_update_devaddr_ranges_req_v1)
       returns (route_devaddr_ranges_res_v1);
 
-  // Stream Routes update (auth admin only)
-  rpc stream(route_stream_req_v1) returns (stream route_stream_res_v1);
-}
+  // Session Key Filters (aka SKFs)
 
-service session_key_filter {
-  // List Filters for an Org (auth delegate_keys/owner/admin)
-  rpc list(session_key_filter_list_req_v1)
-      returns (stream session_key_filter_v1);
+  // List Filters for a Route (auth delegate_keys/owner/admin)
+  rpc list_skfs(route_skf_list_req_v1) returns (stream skf_v1);
   // List Filters for a DevAddr (auth delegate_keys/owner/admin
-  rpc get(session_key_filter_get_req_v1) returns (stream session_key_filter_v1);
+  rpc get_skfs(route_skf_get_req_v1) returns (stream skf_v1);
   // Update Filters for an Org (auth delegate_keys/owner/admin)
-  rpc update(stream session_key_filter_update_req_v1)
-      returns (session_key_filter_update_res_v1);
-  // Stream Filter update (auth admin only)
-  rpc stream(session_key_filter_stream_req_v1)
-      returns (stream session_key_filter_stream_res_v1);
+  rpc update_skfs(route_skf_update_req_v1) returns (route_skf_update_res_v1);
 }
 
 service gateway {
@@ -438,6 +710,11 @@ service gateway {
       returns (gateway_region_params_res_v1);
   // Get H3 Location for a gateway (auth admin only)
   rpc location(gateway_location_req_v1) returns (gateway_location_res_v1);
+  // Get info for the specified gateway
+  rpc info(gateway_info_req_v1) returns (gateway_info_res_v1);
+  // Get a stream of gateway info
+  rpc info_stream(gateway_info_stream_req_v1)
+      returns (stream gateway_info_stream_res_v1);
 }
 
 service admin {
@@ -448,4 +725,6 @@ service admin {
   // Load params and cell indexes for a region into the config service (auth
   // admin only)
   rpc load_region(admin_load_region_req_v1) returns (admin_load_region_res_v1);
+  // Return the region params for the specified region
+  rpc region_params(region_params_req_v1) returns (region_params_res_v1);
 }

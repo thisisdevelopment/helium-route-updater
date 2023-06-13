@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"os"
 )
 
 func main() {
@@ -24,10 +25,10 @@ func main() {
 	//fmt.Printf("Public key: %s\n", kp.Public().String())
 	//fmt.Printf("Private key: %s\n", hex.EncodeToString(kp.Bytes()))
 
-	//data, _ := os.ReadFile("./keypair.bin")
-	//keypair := helium_crypto.KeyPairFromBytes(data)
-	keypair := helium_crypto.KeyPairFromString("1pgvqN2QH52v4VtJZhkE4V24qzpqLX41soypvws4jDt3cKcEKg2zWK9U7MCwppEK4Jxfx1s9ZbcMK65SJaxYSBfVR7a8h4")
-	fmt.Printf("Keypair: %s\n", keypair.String())
+	data, _ := os.ReadFile("./keypair.bin")
+	keypair := helium_crypto.KeyPairFromBytes(data)
+	//keypair := helium_crypto.KeyPairFromString("1pgvqN2QH52v4VtJZhkE4V24qzpqLX41soypvws4jDt3cKcEKg2zWK9U7MCwppEK4Jxfx1s9ZbcMK65SJaxYSBfVR7a8h4")
+	fmt.Printf("Keypair: %s\n", keypair.Public().String())
 
 	ctx := context.Background()
 	conn, err := grpc.Dial(
@@ -40,16 +41,16 @@ func main() {
 	}
 	defer conn.Close()
 
-	client := iot_config.NewOrgClient(conn)
-	res, err := client.List(ctx, &iot_config.OrgListReqV1{})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Result: %+v\n", res)
+	//client := iot_config.NewOrgClient(conn)
+	//res, err := client.List(ctx, &iot_config.OrgListReqV1{})
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Printf("Result: %+v\n", res)
 
 	rclient := iot_config.NewRouteClient(conn)
 	rres, err := rclient.Get(ctx, helium_crypto.SignRequest(&iot_config.RouteGetReqV1{
-		Id: "e54ec3a6-b800-11ed-82f1-d3aaf69d6413",
+		Id: "8344fd9c-09c2-11ee-a778-4b9462f9aeb4",
 	}, keypair))
 	if err != nil {
 		panic(err)

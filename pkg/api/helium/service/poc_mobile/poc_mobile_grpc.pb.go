@@ -25,6 +25,7 @@ type PocMobileClient interface {
 	SubmitSpeedtest(ctx context.Context, in *SpeedtestReqV1, opts ...grpc.CallOption) (*SpeedtestRespV1, error)
 	SubmitCellHeartbeat(ctx context.Context, in *CellHeartbeatReqV1, opts ...grpc.CallOption) (*CellHeartbeatRespV1, error)
 	SubmitDataTransferSession(ctx context.Context, in *DataTransferSessionReqV1, opts ...grpc.CallOption) (*DataTransferSessionRespV1, error)
+	SubmitSubscriberLocation(ctx context.Context, in *SubscriberLocationReqV1, opts ...grpc.CallOption) (*SubscriberLocationRespV1, error)
 }
 
 type pocMobileClient struct {
@@ -62,6 +63,15 @@ func (c *pocMobileClient) SubmitDataTransferSession(ctx context.Context, in *Dat
 	return out, nil
 }
 
+func (c *pocMobileClient) SubmitSubscriberLocation(ctx context.Context, in *SubscriberLocationReqV1, opts ...grpc.CallOption) (*SubscriberLocationRespV1, error) {
+	out := new(SubscriberLocationRespV1)
+	err := c.cc.Invoke(ctx, "/helium.poc_mobile.poc_mobile/submit_subscriber_location", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PocMobileServer is the server API for PocMobile service.
 // All implementations must embed UnimplementedPocMobileServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type PocMobileServer interface {
 	SubmitSpeedtest(context.Context, *SpeedtestReqV1) (*SpeedtestRespV1, error)
 	SubmitCellHeartbeat(context.Context, *CellHeartbeatReqV1) (*CellHeartbeatRespV1, error)
 	SubmitDataTransferSession(context.Context, *DataTransferSessionReqV1) (*DataTransferSessionRespV1, error)
+	SubmitSubscriberLocation(context.Context, *SubscriberLocationReqV1) (*SubscriberLocationRespV1, error)
 	mustEmbedUnimplementedPocMobileServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedPocMobileServer) SubmitCellHeartbeat(context.Context, *CellHe
 }
 func (UnimplementedPocMobileServer) SubmitDataTransferSession(context.Context, *DataTransferSessionReqV1) (*DataTransferSessionRespV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitDataTransferSession not implemented")
+}
+func (UnimplementedPocMobileServer) SubmitSubscriberLocation(context.Context, *SubscriberLocationReqV1) (*SubscriberLocationRespV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitSubscriberLocation not implemented")
 }
 func (UnimplementedPocMobileServer) mustEmbedUnimplementedPocMobileServer() {}
 
@@ -152,6 +166,24 @@ func _PocMobile_SubmitDataTransferSession_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PocMobile_SubmitSubscriberLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubscriberLocationReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PocMobileServer).SubmitSubscriberLocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.poc_mobile.poc_mobile/submit_subscriber_location",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PocMobileServer).SubmitSubscriberLocation(ctx, req.(*SubscriberLocationReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PocMobile_ServiceDesc is the grpc.ServiceDesc for PocMobile service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var PocMobile_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "submit_data_transfer_session",
 			Handler:    _PocMobile_SubmitDataTransferSession_Handler,
+		},
+		{
+			MethodName: "submit_subscriber_location",
+			Handler:    _PocMobile_SubmitSubscriberLocation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
