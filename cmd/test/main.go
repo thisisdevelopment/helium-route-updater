@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
 	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -28,13 +31,24 @@ func main() {
 	data, _ := os.ReadFile("./keypair.bin")
 	keypair := helium_crypto.KeyPairFromBytes(data)
 	//keypair := helium_crypto.KeyPairFromString("1pgvqN2QH52v4VtJZhkE4V24qzpqLX41soypvws4jDt3cKcEKg2zWK9U7MCwppEK4Jxfx1s9ZbcMK65SJaxYSBfVR7a8h4")
-	fmt.Printf("Keypair: %s\n", keypair.Public().String())
+	fmt.Printf("Keypair: %s\n", keypair.String())
+	fmt.Printf("Public: %s\n", keypair.Public().String())
+
+	//server := "http://mainnet-config.helium.io:6080"
+	server := "https://config.iot.mainnet.helium.io:6080"
+	serverCredentials := credentials.NewTLS(&tls.Config{})
+	if strings.HasPrefix(server, "http://") {
+		server = server[7:]
+		serverCredentials = insecure.NewCredentials()
+	} else if strings.HasPrefix(server, "https://") {
+		server = server[8:]
+	}
 
 	ctx := context.Background()
 	conn, err := grpc.Dial(
-		"mainnet-config.helium.io:6080",
+		server,
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(serverCredentials),
 	)
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)

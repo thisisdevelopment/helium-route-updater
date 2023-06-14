@@ -2,21 +2,31 @@ package updater
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
 	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/listener"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"strings"
 )
 
 func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-chan listener.DeviceEvent) {
 	ctx := context.Background()
+
+	serverCredentials := credentials.NewTLS(&tls.Config{})
+	if strings.HasPrefix(server, "http://") {
+		server = server[7:]
+		serverCredentials = insecure.NewCredentials()
+	} else if strings.HasPrefix(server, "https://") {
+		server = server[8:]
+	}
 	conn, err := grpc.Dial(
 		server,
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
-		//yes this is correct, ssl/tls is not supported :-(
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(serverCredentials),
 	)
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)

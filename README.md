@@ -31,6 +31,9 @@ Currently not implemented
 
 ## Library usage
 
+Please use the ssl/tls endpoint for production: https://config.iot.mainnet.helium.io:6080
+See https://github.com/helium/oracles/issues/543
+
 ```go
 ch := make(chan listener.DeviceEvent)
 
