@@ -38,7 +38,8 @@ See https://github.com/helium/oracles/issues/543
 ch := make(chan listener.DeviceEvent)
 
 keypair := helium_crypto.KeyPairFromString(config.Auth)
-go updater.Run(config.Server, config.RouteId, keypair, ch)
+client := helium_api.NewClient(config.Server, keypair)
+go updater.Run(client, config.RouteId, ch)
 
 devEui, _ := strconv.ParseUint("<your device id>", 16, 64)
 appEui, _ := strconv.ParseUint("<your app eui>", 16, 64)

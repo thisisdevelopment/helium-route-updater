@@ -2,39 +2,16 @@ package updater
 
 import (
 	"context"
-	"crypto/tls"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
+	helium_api "github.com/thisisdevelopment/helium-route-updater/pkg/helium-api"
 	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/listener"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	"log"
-	"strings"
 )
 
-func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-chan listener.DeviceEvent) {
+func Run(client helium_api.Client, routeId string, ch <-chan listener.DeviceEvent) {
 	ctx := context.Background()
-
-	serverCredentials := credentials.NewTLS(&tls.Config{})
-	if strings.HasPrefix(server, "http://") {
-		server = server[7:]
-		serverCredentials = insecure.NewCredentials()
-	} else if strings.HasPrefix(server, "https://") {
-		server = server[8:]
-	}
-	conn, err := grpc.Dial(
-		server,
-		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
-		grpc.WithTransportCredentials(serverCredentials),
-	)
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer conn.Close()
-
-	client := iot_config.NewRouteClient(conn)
-
+	routeClient := client.NewRouteClient()
 	for event := range ch {
 		pair := &iot_config.EuiPairV1{
 			RouteId: routeId,
@@ -42,7 +19,7 @@ func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-cha
 			DevEui:  event.DevEui,
 		}
 
-		u, err := client.UpdateEuis(ctx)
+		u, err := routeClient.UpdateEuis(ctx)
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -54,7 +31,7 @@ func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-cha
 				EuiPair:   pair,
 				Timestamp: 0,
 				Signature: nil,
-			}, keypair))
+			}, client.Keypair))
 			if err != nil {
 				log.Fatal(err)
 				return
@@ -66,7 +43,7 @@ func Run(server string, routeId string, keypair *helium_crypto.KeyPair, ch <-cha
 				EuiPair:   pair,
 				Timestamp: 0,
 				Signature: nil,
-			}, keypair))
+			}, client.Keypair))
 			if err != nil {
 				log.Fatal(err)
 				return
