@@ -11,13 +11,17 @@ type SignedRequest interface {
 	proto.Message
 	GetSignature() []byte
 	GetSigner() []byte
+}
+
+type SignedTimestampedRequest interface {
+	SignedRequest
 	GetTimestamp() uint64
 }
 
 //TODO: as protoc-gen-go does not generate setters (https://github.com/golang/protobuf/issues/664) we revert to reflection here
 //      the SignedRequest interface guarantees the fields are available
 
-func SignRequest[T SignedRequest](req T, keypair *KeyPair) T {
+func SignRequest[T SignedTimestampedRequest](req T, keypair *KeyPair) T {
 	reflect.ValueOf(req).Elem().FieldByName("Signature").SetBytes([]byte{})
 	reflect.ValueOf(req).Elem().FieldByName("Signer").SetBytes(keypair.Public().Bytes())
 	//here to prevent replay attacks; although it does not seem to be checked
@@ -29,7 +33,17 @@ func SignRequest[T SignedRequest](req T, keypair *KeyPair) T {
 	return req
 }
 
-func VerifyRequest[T SignedRequest](req T, keypair *KeyPair) bool {
+func SignRequestNoTimestamp[T SignedRequest](req T, keypair *KeyPair) T {
+	reflect.ValueOf(req).Elem().FieldByName("Signature").SetBytes([]byte{})
+	reflect.ValueOf(req).Elem().FieldByName("Signer").SetBytes(keypair.Public().Bytes())
+	marshalled, _ := proto.Marshal(req)
+	signature := keypair.Sign(marshalled)
+	reflect.ValueOf(req).Elem().FieldByName("Signature").SetBytes(signature)
+
+	return req
+}
+
+func VerifyRequest[T SignedTimestampedRequest](req T, keypair *KeyPair) bool {
 	signature := req.GetSignature()
 	signer := req.GetSigner()
 	if bytes.Equal(keypair.Public().Bytes(), signer) {
