@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-func Run(client helium_api.Client, routeId string, ch <-chan listener.DeviceEvent) {
+func Run(client *helium_api.Client, routeId string, ch <-chan listener.DeviceEvent) {
 	ctx := context.Background()
 	routeClient := client.NewRouteClient()
 	for event := range ch {
