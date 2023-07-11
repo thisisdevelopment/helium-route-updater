@@ -518,9 +518,10 @@ type LoraWitnessReportReqV1 struct {
 	// Timestamp of witness received in nanos since unix epoch
 	Timestamp uint64 `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Tmst      uint32 `protobuf:"varint,5,opt,name=tmst,proto3" json:"tmst,omitempty"`
-	// Signal in ddbm
+	// Signal in ddBm
 	Signal int32 `protobuf:"zigzag32,6,opt,name=signal,proto3" json:"signal,omitempty"`
-	Snr    int32 `protobuf:"varint,7,opt,name=snr,proto3" json:"snr,omitempty"`
+	// SNR in ddB
+	Snr int32 `protobuf:"varint,7,opt,name=snr,proto3" json:"snr,omitempty"`
 	// Frequency in Hz
 	Frequency uint64          `protobuf:"varint,8,opt,name=frequency,proto3" json:"frequency,omitempty"`
 	Datarate  helium.DataRate `protobuf:"varint,10,opt,name=datarate,proto3,enum=helium.DataRate" json:"datarate,omitempty"`

@@ -172,130 +172,222 @@ var Gateway_ServiceDesc = grpc.ServiceDesc{
 	Metadata: "service/mobile_config.proto",
 }
 
-// RouterClient is the client API for Router service.
+// EntityClient is the client API for Entity service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type RouterClient interface {
-	// Verify a given router key with data transfer burn authority is registered
-	// returning the requested pubkey binary if present
-	Get(ctx context.Context, in *RouterGetReqV1, opts ...grpc.CallOption) (*RouterGetResV1, error)
-	// Retrieve a list of all registered router pubkey binaries with burn
-	// authority registered to the config service
-	List(ctx context.Context, in *RouterListReqV1, opts ...grpc.CallOption) (*RouterListResV1, error)
+type EntityClient interface {
+	// Verify the rewardable entity (mobile subscriber) is registered to the chain
+	Verify(ctx context.Context, in *EntityVerifyReqV1, opts ...grpc.CallOption) (*EntityVerifyResV1, error)
 }
 
-type routerClient struct {
+type entityClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewRouterClient(cc grpc.ClientConnInterface) RouterClient {
-	return &routerClient{cc}
+func NewEntityClient(cc grpc.ClientConnInterface) EntityClient {
+	return &entityClient{cc}
 }
 
-func (c *routerClient) Get(ctx context.Context, in *RouterGetReqV1, opts ...grpc.CallOption) (*RouterGetResV1, error) {
-	out := new(RouterGetResV1)
-	err := c.cc.Invoke(ctx, "/helium.mobile_config.router/get", in, out, opts...)
+func (c *entityClient) Verify(ctx context.Context, in *EntityVerifyReqV1, opts ...grpc.CallOption) (*EntityVerifyResV1, error) {
+	out := new(EntityVerifyResV1)
+	err := c.cc.Invoke(ctx, "/helium.mobile_config.entity/verify", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *routerClient) List(ctx context.Context, in *RouterListReqV1, opts ...grpc.CallOption) (*RouterListResV1, error) {
-	out := new(RouterListResV1)
-	err := c.cc.Invoke(ctx, "/helium.mobile_config.router/list", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// RouterServer is the server API for Router service.
-// All implementations must embed UnimplementedRouterServer
+// EntityServer is the server API for Entity service.
+// All implementations must embed UnimplementedEntityServer
 // for forward compatibility
-type RouterServer interface {
-	// Verify a given router key with data transfer burn authority is registered
-	// returning the requested pubkey binary if present
-	Get(context.Context, *RouterGetReqV1) (*RouterGetResV1, error)
-	// Retrieve a list of all registered router pubkey binaries with burn
-	// authority registered to the config service
-	List(context.Context, *RouterListReqV1) (*RouterListResV1, error)
-	mustEmbedUnimplementedRouterServer()
+type EntityServer interface {
+	// Verify the rewardable entity (mobile subscriber) is registered to the chain
+	Verify(context.Context, *EntityVerifyReqV1) (*EntityVerifyResV1, error)
+	mustEmbedUnimplementedEntityServer()
 }
 
-// UnimplementedRouterServer must be embedded to have forward compatible implementations.
-type UnimplementedRouterServer struct {
+// UnimplementedEntityServer must be embedded to have forward compatible implementations.
+type UnimplementedEntityServer struct {
 }
 
-func (UnimplementedRouterServer) Get(context.Context, *RouterGetReqV1) (*RouterGetResV1, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+func (UnimplementedEntityServer) Verify(context.Context, *EntityVerifyReqV1) (*EntityVerifyResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Verify not implemented")
 }
-func (UnimplementedRouterServer) List(context.Context, *RouterListReqV1) (*RouterListResV1, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
-}
-func (UnimplementedRouterServer) mustEmbedUnimplementedRouterServer() {}
+func (UnimplementedEntityServer) mustEmbedUnimplementedEntityServer() {}
 
-// UnsafeRouterServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to RouterServer will
+// UnsafeEntityServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to EntityServer will
 // result in compilation errors.
-type UnsafeRouterServer interface {
-	mustEmbedUnimplementedRouterServer()
+type UnsafeEntityServer interface {
+	mustEmbedUnimplementedEntityServer()
 }
 
-func RegisterRouterServer(s grpc.ServiceRegistrar, srv RouterServer) {
-	s.RegisterService(&Router_ServiceDesc, srv)
+func RegisterEntityServer(s grpc.ServiceRegistrar, srv EntityServer) {
+	s.RegisterService(&Entity_ServiceDesc, srv)
 }
 
-func _Router_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouterGetReqV1)
+func _Entity_Verify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EntityVerifyReqV1)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RouterServer).Get(ctx, in)
+		return srv.(EntityServer).Verify(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/helium.mobile_config.router/get",
+		FullMethod: "/helium.mobile_config.entity/verify",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RouterServer).Get(ctx, req.(*RouterGetReqV1))
+		return srv.(EntityServer).Verify(ctx, req.(*EntityVerifyReqV1))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Router_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouterListReqV1)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RouterServer).List(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/helium.mobile_config.router/list",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RouterServer).List(ctx, req.(*RouterListReqV1))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// Router_ServiceDesc is the grpc.ServiceDesc for Router service.
+// Entity_ServiceDesc is the grpc.ServiceDesc for Entity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Router_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "helium.mobile_config.router",
-	HandlerType: (*RouterServer)(nil),
+var Entity_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "helium.mobile_config.entity",
+	HandlerType: (*EntityServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "get",
-			Handler:    _Router_Get_Handler,
+			MethodName: "verify",
+			Handler:    _Entity_Verify_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "service/mobile_config.proto",
+}
+
+// AuthorizationClient is the client API for Authorization service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AuthorizationClient interface {
+	// Submit a pubkey binary and network key role for an authorized entity on the
+	// mobile network to verify if it is registered with the given role.
+	// `mobile_router` keys have data transfer burn authority while
+	// `mobile_carrier` keys have subscriber activity report signing authority
+	Verify(ctx context.Context, in *AuthorizationVerifyReqV1, opts ...grpc.CallOption) (*AuthorizationVerifyResV1, error)
+	// Retrieve a list of all registered pubkey binaries registered to the config
+	// service with the requested role
+	List(ctx context.Context, in *AuthorizationListReqV1, opts ...grpc.CallOption) (*AuthorizationListResV1, error)
+}
+
+type authorizationClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAuthorizationClient(cc grpc.ClientConnInterface) AuthorizationClient {
+	return &authorizationClient{cc}
+}
+
+func (c *authorizationClient) Verify(ctx context.Context, in *AuthorizationVerifyReqV1, opts ...grpc.CallOption) (*AuthorizationVerifyResV1, error) {
+	out := new(AuthorizationVerifyResV1)
+	err := c.cc.Invoke(ctx, "/helium.mobile_config.authorization/verify", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authorizationClient) List(ctx context.Context, in *AuthorizationListReqV1, opts ...grpc.CallOption) (*AuthorizationListResV1, error) {
+	out := new(AuthorizationListResV1)
+	err := c.cc.Invoke(ctx, "/helium.mobile_config.authorization/list", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AuthorizationServer is the server API for Authorization service.
+// All implementations must embed UnimplementedAuthorizationServer
+// for forward compatibility
+type AuthorizationServer interface {
+	// Submit a pubkey binary and network key role for an authorized entity on the
+	// mobile network to verify if it is registered with the given role.
+	// `mobile_router` keys have data transfer burn authority while
+	// `mobile_carrier` keys have subscriber activity report signing authority
+	Verify(context.Context, *AuthorizationVerifyReqV1) (*AuthorizationVerifyResV1, error)
+	// Retrieve a list of all registered pubkey binaries registered to the config
+	// service with the requested role
+	List(context.Context, *AuthorizationListReqV1) (*AuthorizationListResV1, error)
+	mustEmbedUnimplementedAuthorizationServer()
+}
+
+// UnimplementedAuthorizationServer must be embedded to have forward compatible implementations.
+type UnimplementedAuthorizationServer struct {
+}
+
+func (UnimplementedAuthorizationServer) Verify(context.Context, *AuthorizationVerifyReqV1) (*AuthorizationVerifyResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Verify not implemented")
+}
+func (UnimplementedAuthorizationServer) List(context.Context, *AuthorizationListReqV1) (*AuthorizationListResV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedAuthorizationServer) mustEmbedUnimplementedAuthorizationServer() {}
+
+// UnsafeAuthorizationServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AuthorizationServer will
+// result in compilation errors.
+type UnsafeAuthorizationServer interface {
+	mustEmbedUnimplementedAuthorizationServer()
+}
+
+func RegisterAuthorizationServer(s grpc.ServiceRegistrar, srv AuthorizationServer) {
+	s.RegisterService(&Authorization_ServiceDesc, srv)
+}
+
+func _Authorization_Verify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthorizationVerifyReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthorizationServer).Verify(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.mobile_config.authorization/verify",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthorizationServer).Verify(ctx, req.(*AuthorizationVerifyReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Authorization_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthorizationListReqV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthorizationServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helium.mobile_config.authorization/list",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthorizationServer).List(ctx, req.(*AuthorizationListReqV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Authorization_ServiceDesc is the grpc.ServiceDesc for Authorization service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Authorization_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "helium.mobile_config.authorization",
+	HandlerType: (*AuthorizationServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "verify",
+			Handler:    _Authorization_Verify_Handler,
 		},
 		{
 			MethodName: "list",
-			Handler:    _Router_List_Handler,
+			Handler:    _Authorization_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
