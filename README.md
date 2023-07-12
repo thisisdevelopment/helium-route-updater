@@ -23,6 +23,12 @@ Make it easy to integrate a new [Oui](https://docs.helium.com/use-the-network/ru
 - a preconfigured route (see adding routes)
 - enough credit in your wallet to "buy" messages
 
+## Building
+
+```bash
+docker-compose run --entrypoint "" --no-deps helium-route-updater ./build.sh
+```
+
 ## Standalone usage
 
 ```
@@ -79,7 +85,7 @@ export SERVER_PORT=<your public LNS server port>
 export DEVADDR_START=<start of your devaddr range>
 export DEVADDR_END=<end of your devaddr range> 
 
-rid=$(./helium-config-service-cli route new --commit  | cut -f3 -d' ')
+rid=$(./helium-config-service-cli route new --commit  | head -n 1 | cut -f3 -d' ')
 ./helium-config-service-cli route update server -r $rid --host $SERVER_HOST --port $SERVER_PORT --commit
 ./helium-config-service-cli route update add-gwmp-region -r $rid eu868 $SERVER_PORT --commit
 ./helium-config-service-cli route devaddrs add --route-id $rid -s $DEVADDR_START -e $DEVADDR_END --commit

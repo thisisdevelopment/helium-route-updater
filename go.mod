@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/google/uuid v1.3.0
+	github.com/sethvargo/go-envconfig v0.9.0
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 )
