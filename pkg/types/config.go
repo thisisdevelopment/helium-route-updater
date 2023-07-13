@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"github.com/joho/godotenv"
 	"github.com/sethvargo/go-envconfig"
 	"log"
 )
@@ -26,7 +27,10 @@ type Config struct {
 
 func ConfigFromEnv() *Config {
 	ctx := context.Background()
-
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	var c Config
 	if err := envconfig.Process(ctx, &c); err != nil {
 		log.Fatal(err)

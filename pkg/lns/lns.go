@@ -6,15 +6,15 @@ import (
 
 type Client interface {
 	GetDevices() []*types.Device
-	Listen(ch chan<- types.DeviceEvent)
+	Listen(ch chan<- types.DeviceEvent, syncCh chan<- bool)
 }
 
 type BaseClient struct {
-	c *types.LnsConfig
+	config *types.LnsConfig
 }
 
 func NewClient(c *types.LnsConfig) Client {
-	base := BaseClient{c: c}
+	base := BaseClient{config: c}
 	if c.Type == "chirpstack" {
 		return NewChirpstackClient(base)
 	} else {

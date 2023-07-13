@@ -1,19 +1,204 @@
 package lns
 
-import "github.com/thisisdevelopment/helium-route-updater/pkg/types"
+import (
+	"context"
+	"crypto/tls"
+	"encoding/hex"
+	"fmt"
+	chirpstack "github.com/chirpstack/chirpstack/api/go/v4/api"
+	"github.com/chirpstack/chirpstack/api/go/v4/common"
+	"github.com/chirpstack/chirpstack/api/go/v4/meta"
+	"github.com/redis/go-redis/v9"
+	"github.com/thisisdevelopment/helium-route-updater/pkg/types"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
+	"log"
+	"strconv"
+	"strings"
+)
+
+type APIToken string
+
+func (a APIToken) GetRequestMetadata(ctx context.Context, url ...string) (map[string]string, error) {
+	return map[string]string{
+		"authorization": fmt.Sprintf("Bearer %s", a),
+	}, nil
+}
+
+func (a APIToken) RequireTransportSecurity() bool {
+	return false
+}
 
 type ChirpstackClient struct {
 	BaseClient
+	deviceClient chirpstack.DeviceServiceClient
+	appClient    chirpstack.ApplicationServiceClient
+	tenantId     string
 }
 
-func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
+func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- bool) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr: c.config.Listen,
+	})
+	ctx := context.Background()
 
+	streamMetaKey := "stream:meta"
+	streamRequestKey := "api:stream:request"
+	lastMetaId := "$"
+	lastRequestId := "$"
+
+	for {
+		resp, err := rdb.XRead(ctx, &redis.XReadArgs{
+			Streams: []string{streamMetaKey, streamRequestKey, lastMetaId, lastRequestId},
+			Count:   10,
+			Block:   0,
+		}).Result()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, streamResp := range resp {
+			for _, msg := range streamResp.Messages {
+				if b, ok := msg.Values["request"].(string); ok {
+					lastRequestId = msg.ID
+					var pl chirpstack.RequestLog
+					if err := proto.Unmarshal([]byte(b), &pl); err != nil {
+						log.Fatal(err)
+					}
+
+					if pl.Service == "api.DeviceService" && pl.Method == "Delete" {
+						//TODO: as we don't have the join eui here, we cannot remove it from our helium route
+						//      instead we schedule a full sync
+						syncCh <- true
+					} else if pl.Service == "api.DeviceService" && pl.Method == "Create" {
+						ch <- types.DeviceEvent{
+							Update: []*types.Device{c.GetDevice(pl.Metadata["dev_eui"])},
+							Delete: []*types.Device{},
+						}
+					}
+				} else {
+					lastMetaId = msg.ID
+					if b, ok := msg.Values["down"].(string); ok {
+						var pl meta.DownlinkMeta
+						if err := proto.Unmarshal([]byte(b), &pl); err != nil {
+							log.Fatal(err)
+						}
+
+						if pl.MessageType == common.MType_JOIN_ACCEPT {
+							ch <- types.DeviceEvent{
+								Update: []*types.Device{c.GetDevice(pl.DevEui)},
+								Delete: []*types.Device{},
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+
+}
+
+func (c *ChirpstackClient) GetApplicationIds() []string {
+	offset := 0
+	limit := 100
+	count := limit
+	res := []string{}
+	for offset < count {
+		apps, _ := c.appClient.List(context.Background(), &chirpstack.ListApplicationsRequest{
+			Limit:    uint32(limit),
+			Offset:   uint32(offset),
+			TenantId: c.tenantId,
+		})
+		for _, app := range apps.Result {
+			res = append(res, app.Id)
+		}
+		count = int(apps.TotalCount)
+		offset = offset + limit
+	}
+	return res
+}
+
+func (c *ChirpstackClient) GetDevice(deviceId string) *types.Device {
+	d, err := c.deviceClient.Get(context.Background(), &chirpstack.GetDeviceRequest{DevEui: deviceId})
+	if err != nil {
+		panic(err)
+	}
+
+	activation, err := c.deviceClient.GetActivation(context.Background(), &chirpstack.GetDeviceActivationRequest{DevEui: deviceId})
+	if err != nil {
+		panic(err)
+	}
+
+	devEui, _ := strconv.ParseUint(d.Device.DevEui, 16, 64)
+	joinEui, _ := strconv.ParseUint(d.Device.JoinEui, 16, 64)
+	devAddr := uint64(0)
+	sKey := []byte{}
+	if activation.DeviceActivation != nil {
+		devAddr, _ = strconv.ParseUint(activation.DeviceActivation.DevAddr, 16, 32)
+		sKey, _ = hex.DecodeString(activation.DeviceActivation.NwkSEncKey)
+	}
+	return &types.Device{
+		DevEui:     devEui,
+		JoinEui:    joinEui,
+		DevAddr:    uint32(devAddr),
+		SessionKey: sKey,
+	}
 }
 
 func (c *ChirpstackClient) GetDevices() []*types.Device {
+	devices := []*types.Device{}
+	for _, appId := range c.GetApplicationIds() {
+		offset := 0
+		limit := 100
+		count := limit
+		for offset < count {
+			resp, err := c.deviceClient.List(context.Background(), &chirpstack.ListDevicesRequest{
+				Limit:         uint32(limit),
+				Offset:        uint32(offset),
+				ApplicationId: appId,
+			})
+			if err != nil {
+				panic(err)
+			}
 
+			for _, dev := range resp.Result {
+				devices = append(devices, c.GetDevice(dev.DevEui))
+			}
+
+			count = int(resp.TotalCount)
+			offset = offset + limit
+		}
+	}
+	return devices
 }
 
 func NewChirpstackClient(client BaseClient) *ChirpstackClient {
-	return &ChirpstackClient{client}
+	authParts := strings.Split(client.config.ApiAuth, ":")
+	server := client.config.ApiEndpoint
+	serverCredentials := credentials.NewTLS(&tls.Config{})
+	if strings.HasPrefix(server, "http://") {
+		server = server[7:]
+		serverCredentials = insecure.NewCredentials()
+	} else if strings.HasPrefix(server, "https://") {
+		server = server[8:]
+	}
+
+	dialOpts := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithPerRPCCredentials(APIToken(authParts[1])),
+		grpc.WithTransportCredentials(serverCredentials),
+	}
+
+	conn, err := grpc.Dial(server, dialOpts...)
+	if err != nil {
+		panic(err)
+	}
+
+	deviceClient := chirpstack.NewDeviceServiceClient(conn)
+	appClient := chirpstack.NewApplicationServiceClient(conn)
+
+	return &ChirpstackClient{BaseClient: client, deviceClient: deviceClient, appClient: appClient, tenantId: authParts[0]}
 }
