@@ -39,9 +39,13 @@ type ChirpstackClient struct {
 }
 
 func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- bool) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: c.config.Listen,
-	})
+
+	opt, err := redis.ParseURL(c.config.Listen)
+	if err != nil {
+		panic(err)
+	}
+
+	rdb := redis.NewClient(opt)
 	ctx := context.Background()
 
 	streamMetaKey := "stream:meta"
@@ -71,8 +75,10 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 					if pl.Service == "api.DeviceService" && pl.Method == "Delete" {
 						//TODO: as we don't have the join eui here, we cannot remove it from our helium route
 						//      instead we schedule a full sync
+						fmt.Printf("[lns][%s] device deleted: %s\n", msg.ID, pl.Metadata["dev_eui"])
 						syncCh <- true
 					} else if pl.Service == "api.DeviceService" && pl.Method == "Create" {
+						fmt.Printf("[lns][%s] device created %s\n", msg.ID, pl.Metadata["dev_eui"])
 						ch <- types.DeviceEvent{
 							Update: []*types.Device{c.GetDevice(pl.Metadata["dev_eui"])},
 							Delete: []*types.Device{},
@@ -87,6 +93,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 						}
 
 						if pl.MessageType == common.MType_JOIN_ACCEPT {
+							fmt.Printf("[lns][%s] device joined %s\n", msg.ID, pl.DevEui)
 							ch <- types.DeviceEvent{
 								Update: []*types.Device{c.GetDevice(pl.DevEui)},
 								Delete: []*types.Device{},
@@ -98,7 +105,6 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 		}
 
 	}
-
 }
 
 func (c *ChirpstackClient) GetApplicationIds() []string {

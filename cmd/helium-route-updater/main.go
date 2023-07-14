@@ -24,26 +24,21 @@ func main() {
 
 	fmt.Printf("Starting\n")
 
-	//go helium_api.Run(heliumClient, config.Helium.RouteId, ch)
+	go helium_api.Run(heliumClient, config.Helium.RouteId, ch)
 	go lnsClient.Listen(ch, syncCh)
 	go sync(config.Helium.RouteId, ch, syncCh, heliumClient, lnsClient)
-	go scheduledSync(syncCh)
-
-	for e := range ch {
-		printDevices("updates", e.Update)
-		printDevices("deletes", e.Delete)
-	}
+	scheduledSync(syncCh)
 }
 
 func scheduledSync(syncCh chan<- bool) {
 	syncCh <- true
-	for _ = range time.Tick(1 * time.Hour) {
+	for range time.Tick(1 * time.Hour) {
 		syncCh <- true
 	}
 }
 
 func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliumClient *helium_api.Client, lnsClient lns.Client) {
-	for _ = range syncCh {
+	for range syncCh {
 		fmt.Printf("[sync] starting full sync\n")
 		devices := lnsClient.GetDevices()
 		ctx := context.Background()
@@ -69,7 +64,7 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 		}
 
 		devicesEuis := append(devices)
-		ch <- syncDevices(devicesEuis, euis, "euis")
+		syncDevices(ch, devicesEuis, euis, "euis")
 
 		skfs := []*types.Device{}
 		skfStream, err := heliumClient.NewRouteClient().GetSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfGetReqV1{RouteId: routeId}, heliumClient.Keypair))
@@ -90,17 +85,7 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 			}
 		}
 		devicesSkfs := append(devices)
-		ch <- syncDevices(devicesSkfs, skfs, "skfs")
-	}
-}
-
-func printDevices(header string, devices []*types.Device) {
-	if len(devices) == 0 {
-		return
-	}
-	fmt.Printf("---- %s (%d) ----\n", header, len(devices))
-	for _, dev := range devices {
-		fmt.Printf("%#v\n", dev)
+		syncDevices(ch, devicesSkfs, skfs, "skfs")
 	}
 }
 
@@ -114,7 +99,7 @@ func getDeviceKey(dev *types.Device, syncType string) string {
 	return key
 }
 
-func syncDevices(lns []*types.Device, helium []*types.Device, syncType string) types.DeviceEvent {
+func syncDevices(ch chan<- types.DeviceEvent, lns []*types.Device, helium []*types.Device, syncType string) {
 	update := []*types.Device{}
 	del := []*types.Device{}
 
@@ -155,8 +140,12 @@ func syncDevices(lns []*types.Device, helium []*types.Device, syncType string) t
 		}
 	}
 
-	return types.DeviceEvent{
-		Update: update,
-		Delete: del,
+	if len(update)+len(del) > 0 {
+		ch <- types.DeviceEvent{
+			Update: update,
+			Delete: del,
+		}
+	} else {
+		fmt.Printf("[sync] %s are in sync\n", syncType)
 	}
 }
