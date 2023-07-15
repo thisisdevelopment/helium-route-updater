@@ -35,6 +35,7 @@ type ChirpstackClient struct {
 	BaseClient
 	deviceClient chirpstack.DeviceServiceClient
 	appClient    chirpstack.ApplicationServiceClient
+	tenantClient chirpstack.TenantServiceClient
 	tenantId     string
 }
 
@@ -112,18 +113,23 @@ func (c *ChirpstackClient) GetApplicationIds() []string {
 	limit := 100
 	count := limit
 	res := []string{}
+
 	for offset < count {
-		apps, _ := c.appClient.List(context.Background(), &chirpstack.ListApplicationsRequest{
+		apps, err := c.appClient.List(context.Background(), &chirpstack.ListApplicationsRequest{
 			Limit:    uint32(limit),
 			Offset:   uint32(offset),
 			TenantId: c.tenantId,
 		})
+		if err != nil {
+			panic(err)
+		}
 		for _, app := range apps.Result {
 			res = append(res, app.Id)
 		}
 		count = int(apps.TotalCount)
 		offset = offset + limit
 	}
+
 	return res
 }
 
@@ -205,6 +211,7 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 
 	deviceClient := chirpstack.NewDeviceServiceClient(conn)
 	appClient := chirpstack.NewApplicationServiceClient(conn)
+	tenantClient := chirpstack.NewTenantServiceClient(conn)
 
-	return &ChirpstackClient{BaseClient: client, deviceClient: deviceClient, appClient: appClient, tenantId: authParts[0]}
+	return &ChirpstackClient{BaseClient: client, deviceClient: deviceClient, appClient: appClient, tenantClient: tenantClient, tenantId: authParts[0]}
 }

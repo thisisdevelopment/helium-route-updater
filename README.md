@@ -1,6 +1,6 @@
 # Helium Router Updater
 
-Automatically adds / removes euis from your helium routes based on updates from your LNS
+Automatically adds / removes euis / skfs from your helium routes based on updates from your LNS
 
 ## Status
 
@@ -9,7 +9,7 @@ We use this internally and things may change (either on our side or on the heliu
 
 ## Purpose
 
-Make it easy to integrate a new [Oui](https://docs.helium.com/use-the-network/run-a-network-server/buy-an-oui/) into Helium
+Make it easy to integrate your own LNS into Helium
 
 ## Requirements
 
@@ -19,21 +19,31 @@ Make it easy to integrate a new [Oui](https://docs.helium.com/use-the-network/ru
   - with your own DevAddr range
   - allows connections from unknown gateways
   - your gateway bridge should be publicly accessible 
-  - should store appeui somewhere as this is required for helium; but not natively supported by chirpstack
+  - should store appEui somewhere as this is required for helium ~~but not natively supported by chirpstack~~ this is possible as of chirpstack 4.4; it is called joinEui  
 - a preconfigured route (see adding routes)
-- enough credit in your wallet to "buy" messages
+- enough DC credit in your wallet to "buy" messages (you can use https://dc-portal.helium.com/ to buy DC credits and view the current DC credits of your oui)
 
 ## Building
 
 ```bash
-docker-compose run --entrypoint "" --no-deps helium-route-updater ./build.sh
+docker-compose run --entrypoint "" helium-route-updater ./build.sh
 ```
 
 ## Standalone usage
 
+Make sure the following environment variables are set (via in a `.env` file or via actual environment variables)
+
 ```
-Currently not implemented
+LNS_TYPE=chirpstack
+LNS_API_AUTH=<tenantid>:<apikey>
+LNS_API_ENDPOINT=<proto>://<chirpstack-server-hostname>
+LNS_LISTEN=redis://<redis-server-hostname>:<port>/<dbnum>
+HELIUM_ROUTE_ID=<route uuid>
+HELIUM_KEYPAIR=<hex encoded keypair>
+HELIUM_SERVER=https://config.iot.mainnet.helium.io:6080
 ```
+
+Run the `./bin/helium-route-updater` command or run the [thisisdeveloment/helium-route-updater](https://hub.docker.com/repository/docker/thisisdevelopment/helium-route-updater/general) docker container
 
 ## Library usage
 
@@ -42,17 +52,16 @@ See https://github.com/helium/oracles/issues/543
 
 ```go
 ch := make(chan listener.DeviceEvent)
-
 keypair := helium_crypto.KeyPairFromString(config.Auth)
 client := helium_api.NewClient(config.Server, keypair)
 go updater.Run(client, config.RouteId, ch)
 
 devEui, _ := strconv.ParseUint("<your device id>", 16, 64)
-appEui, _ := strconv.ParseUint("<your app eui>", 16, 64)
-ch <- listener.DeviceEvent{
-    DevEui:    devEui,
-    AppEui:    appEui,
-    EventType: eventType,
+joinEui, _ := strconv.ParseUint("<your app eui>", 16, 64)
+device = &types.Device{devEui: devEui, joinEui: joinEui}
+ch <- types.DeviceEvent{
+    Update: []*types.Device{device},
+    Delete: []*types.Device{},
 }
 
 ```

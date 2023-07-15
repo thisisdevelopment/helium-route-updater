@@ -5,19 +5,20 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sethvargo/go-envconfig"
 	"log"
+	"os"
 )
 
 type LnsConfig struct {
-	Type        string `env:"TYPE"`
-	Listen      string `env:"LISTEN"`
-	ApiAuth     string `env:"API_AUTH"`
-	ApiEndpoint string `env:"API_ENDPOINT"`
+	Type        string `env:"TYPE,required"`
+	Listen      string `env:"LISTEN,required"`
+	ApiAuth     string `env:"API_AUTH,required"`
+	ApiEndpoint string `env:"API_ENDPOINT,required"`
 }
 
 type HeliumConfig struct {
-	RouteId string `env:"ROUTE_ID"`
-	KeyPair string `env:"KEYPAIR"`
-	Server  string `env:"SERVER"`
+	RouteId string `env:"ROUTE_ID,required"`
+	KeyPair string `env:"KEYPAIR,required"`
+	Server  string `env:"SERVER,required"`
 }
 
 type Config struct {
@@ -27,9 +28,11 @@ type Config struct {
 
 func ConfigFromEnv() *Config {
 	ctx := context.Background()
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if _, err := os.Stat(".env"); err == nil {
+		err := godotenv.Load(".env")
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
 	}
 	var c Config
 	if err := envconfig.Process(ctx, &c); err != nil {

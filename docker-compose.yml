@@ -7,7 +7,9 @@ networks:
 services:
   helium-route-updater:
     user: ${USER_ID:-1000}:${GROUP_ID:-1000}
-    build: ./
+    build:
+      context: ./
+      dockerfile: ./Dockerfile.dev
     init: true
     environment:
       BUILD: "./cmd/helium-route-updater"
