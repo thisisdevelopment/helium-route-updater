@@ -5,7 +5,7 @@ Automatically adds / removes euis / skfs from your helium routes based on update
 ## Status
 
 **Beta**  
-We use this internally and things may change (either on our side or on the helium side)  
+We use this internally and things may change (either on our side or on the helium side)
 
 ## Purpose
 
@@ -13,15 +13,17 @@ Make it easy to integrate your own LNS into Helium
 
 ## Requirements
 
-- your own Helium [Oui](https://docs.helium.com/use-the-network/run-a-network-server/buy-an-oui/) 
+- your own Helium [Oui](https://docs.helium.com/use-the-network/run-a-network-server/buy-an-oui/)
 - your own Helium DevAddr range
 - your own LNS (eg: [Chirpstack](https://www.chirpstack.io/)) configured for helium:
-  - with your own DevAddr range
-  - allows connections from unknown gateways
-  - your gateway bridge should be publicly accessible 
-  - should store appEui somewhere as this is required for helium ~~but not natively supported by chirpstack~~ this is possible as of chirpstack 4.4; it is called joinEui  
+    - with your own DevAddr range
+    - allows connections from unknown gateways
+    - your gateway bridge should be publicly accessible
+    - should store appEui somewhere as this is required for helium ~~but not natively supported by chirpstack~~ this is
+      possible as of chirpstack 4.4; it is called joinEui
 - a preconfigured route (see adding routes)
-- enough DC credit in your wallet to "buy" messages (you can use https://dc-portal.helium.com/ to buy DC credits and view the current DC credits of your oui)
+- enough DC credit in your wallet to "buy" messages (you can use https://dc-portal.helium.com/ to buy DC credits and
+  view the current DC credits of your oui)
 
 ## Building
 
@@ -38,12 +40,22 @@ LNS_TYPE=chirpstack
 LNS_API_AUTH=<tenantid>:<apikey>
 LNS_API_ENDPOINT=<proto>://<chirpstack-server-hostname>
 LNS_LISTEN=redis://<redis-server-hostname>:<port>/<dbnum>
+LNS_AUTO_ROAMING=<boolean>
 HELIUM_ROUTE_ID=<route uuid>
 HELIUM_KEYPAIR=<hex encoded keypair>
 HELIUM_SERVER=https://config.iot.mainnet.helium.io:6080
 ```
 
-Run the `./bin/helium-route-updater` command or run the [thisisdeveloment/helium-route-updater](https://hub.docker.com/repository/docker/thisisdevelopment/helium-route-updater/general) docker container
+Run the `./bin/helium-route-updater` command or run
+the [thisisdeveloment/helium-route-updater](https://hub.docker.com/repository/docker/thisisdevelopment/helium-route-updater/general)
+docker container
+
+The only odd one here is `LNS_AUTO_ROAMING`; it will update the region of the linked device profile of a device if it
+detects a different region in the `JOIN_REQUEST/REJOIN_REQUEST`. This one is not helium specific; but as helium
+is one of the few global LoRaWAN networks and it fits easily in the rest of the structure it is an optional feature here.
+
+**Caution**: The `LNS_AUTO_ROAMING` feature currently assumes each device has it own device profile. If you have a setup 
+were you share device profiles between multiple devices this wil break things!! 
 
 ## Library usage
 
@@ -60,8 +72,8 @@ devEui, _ := strconv.ParseUint("<your device id>", 16, 64)
 joinEui, _ := strconv.ParseUint("<your app eui>", 16, 64)
 device = &types.Device{devEui: devEui, joinEui: joinEui}
 ch <- types.DeviceEvent{
-    Update: []*types.Device{device},
-    Delete: []*types.Device{},
+Update: []*types.Device{device},
+Delete: []*types.Device{},
 }
 
 ```
@@ -101,8 +113,10 @@ rid=$(./helium-config-service-cli route new --commit  | head -n 1 | cut -f3 -d' 
 ```
 
 # Contributing
+
 You can help to improve this, check out how you can do things [CONTRIBUTING.md](CONTRIBUTING.md)
 
 # License
+
 © [This is Development BV](https://www.thisisdevelopment.nl), 2023~time.Now()
 Released under the [MIT License](./LICENSE)

@@ -13,6 +13,7 @@ type LnsConfig struct {
 	Listen      string `env:"LISTEN,required"`
 	ApiAuth     string `env:"API_AUTH,required"`
 	ApiEndpoint string `env:"API_ENDPOINT,required"`
+	AutoRoaming bool   `env:"AUTO_ROAMING,default=false"`
 }
 
 type HeliumConfig struct {

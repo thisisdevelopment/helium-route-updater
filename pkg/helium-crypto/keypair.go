@@ -13,12 +13,12 @@ import (
  *
  * The binary format for a keypair which contains both the public + private key is
  *   byte 0 => nettype | keytype
- *   byte 1-64 => private key (64 bit)
- *   byte 65-97 => public key (32 bit)
+ *   byte 1-64 => private key (64 bytes, 512 bits)
+ *   byte 65-97 => public key (32 bytes, 256 bits)
  *
  * Alternatively you can have a "keypair" which only has the public key; the binary format for that is:
  *   byte 0 => nettype | keytype
- *   byte 1-32 => public key (32 bit)
+ *   byte 1-32 => public key (32 bytes, 256 bits)
  *
  * When the keys are displayed/used as string their keypairs are base58 encoded
  */

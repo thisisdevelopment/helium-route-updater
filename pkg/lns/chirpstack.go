@@ -33,10 +33,11 @@ func (a APIToken) RequireTransportSecurity() bool {
 
 type ChirpstackClient struct {
 	BaseClient
-	deviceClient chirpstack.DeviceServiceClient
-	appClient    chirpstack.ApplicationServiceClient
-	tenantClient chirpstack.TenantServiceClient
-	tenantId     string
+	deviceClient        chirpstack.DeviceServiceClient
+	deviceProfileClient chirpstack.DeviceProfileServiceClient
+	appClient           chirpstack.ApplicationServiceClient
+	tenantClient        chirpstack.TenantServiceClient
+	tenantId            string
 }
 
 func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- bool) {
@@ -100,6 +101,19 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 								Delete: []*types.Device{},
 							}
 						}
+					} else if b, ok := msg.Values["up"].(string); ok {
+						if c.config.AutoRoaming {
+							var pl meta.UplinkMeta
+							if err := proto.Unmarshal([]byte(b), &pl); err != nil {
+								log.Fatal(err)
+							}
+							if pl.MessageType == common.MType_JOIN_REQUEST || pl.MessageType == common.MType_REJOIN_REQUEST {
+								region, ok := pl.RxInfo[0].Metadata["region_config_id"]
+								if ok {
+									c.AutoRoaming(pl.DevEui, region)
+								}
+							}
+						}
 					}
 				}
 			}
@@ -160,6 +174,27 @@ func (c *ChirpstackClient) GetDevice(deviceId string) *types.Device {
 	}
 }
 
+func (c *ChirpstackClient) AutoRoaming(deviceId string, regionId string) {
+	d, err := c.deviceClient.Get(context.Background(), &chirpstack.GetDeviceRequest{DevEui: deviceId})
+	if err != nil {
+		panic(err)
+	}
+
+	profile, err := c.deviceProfileClient.Get(context.Background(), &chirpstack.GetDeviceProfileRequest{Id: d.Device.DeviceProfileId})
+	if err != nil {
+		panic(err)
+	}
+
+	if profile.DeviceProfile.RegionConfigId != regionId {
+		fmt.Printf("[lns] autoroaming %s; updating region from %s to %s\n", deviceId, profile.DeviceProfile.RegionConfigId, regionId)
+		profile.DeviceProfile.RegionConfigId = regionId
+		_, err := c.deviceProfileClient.Update(context.Background(), &chirpstack.UpdateDeviceProfileRequest{DeviceProfile: profile.DeviceProfile})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func (c *ChirpstackClient) GetDevices() []*types.Device {
 	devices := []*types.Device{}
 	for _, appId := range c.GetApplicationIds() {
@@ -210,8 +245,9 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	}
 
 	deviceClient := chirpstack.NewDeviceServiceClient(conn)
+	deviceProfileClient := chirpstack.NewDeviceProfileServiceClient(conn)
 	appClient := chirpstack.NewApplicationServiceClient(conn)
 	tenantClient := chirpstack.NewTenantServiceClient(conn)
 
-	return &ChirpstackClient{BaseClient: client, deviceClient: deviceClient, appClient: appClient, tenantClient: tenantClient, tenantId: authParts[0]}
+	return &ChirpstackClient{BaseClient: client, deviceClient: deviceClient, deviceProfileClient: deviceProfileClient, appClient: appClient, tenantClient: tenantClient, tenantId: authParts[0]}
 }
