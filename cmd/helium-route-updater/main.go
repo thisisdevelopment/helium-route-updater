@@ -64,11 +64,12 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 				JoinEui: resp.AppEui,
 			})
 		}
+
 		fmt.Printf("[sync] Found %d euis\n", len(euis))
 		syncDevices(ch, devices, euis, "euis")
 
 		skfs := []*types.Device{}
-		skfStream, err := heliumClient.NewRouteClient().GetSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfGetReqV1{RouteId: routeId}, heliumClient.Keypair))
+		skfStream, err := heliumClient.NewRouteClient().ListSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfListReqV1{RouteId: routeId}, heliumClient.Keypair))
 		if err != nil {
 			log.Fatalf("cannot get skfs %v", err)
 		}
