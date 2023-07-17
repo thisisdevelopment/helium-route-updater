@@ -81,11 +81,14 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 				log.Fatalf("cannot receive skf %v", err)
 			}
 			sk, _ := hex.DecodeString(resp.SessionKey)
+
 			if len(sk) > 0 {
 				skfs = append(skfs, &types.Device{
 					DevAddr:    resp.Devaddr,
 					SessionKey: sk,
 				})
+			} else {
+				fmt.Printf("[sync] uhhm .. skf does not contain session key? %#V\n", resp)
 			}
 		}
 		fmt.Printf("[sync] Found %d skfs\n", len(skfs))
