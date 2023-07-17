@@ -43,9 +43,11 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 		devices := lnsClient.GetDevices()
 		ctx := context.Background()
 
+		fmt.Printf("[sync] Found %d devices in the lns\n", len(devices))
+
 		euiStream, err := heliumClient.NewRouteClient().GetEuis(ctx, helium_crypto.SignRequest(&iot_config.RouteGetEuisReqV1{RouteId: routeId}, heliumClient.Keypair))
 		if err != nil {
-			log.Fatalf("cannot receive %v", err)
+			log.Fatalf("cannot get euis %v", err)
 		}
 
 		euis := []*types.Device{}
@@ -55,26 +57,28 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 				break
 			}
 			if err != nil {
-				log.Fatalf("cannot receive %v", err)
+				log.Fatalf("cannot receive skf %v", err)
 			}
 			euis = append(euis, &types.Device{
 				DevEui:  resp.DevEui,
 				JoinEui: resp.AppEui,
 			})
 		}
-
-		devicesEuis := append(devices)
-		syncDevices(ch, devicesEuis, euis, "euis")
+		fmt.Printf("[sync] Found %d euis\n", len(euis))
+		syncDevices(ch, devices, euis, "euis")
 
 		skfs := []*types.Device{}
 		skfStream, err := heliumClient.NewRouteClient().GetSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfGetReqV1{RouteId: routeId}, heliumClient.Keypair))
+		if err != nil {
+			log.Fatalf("cannot get skfs %v", err)
+		}
 		for {
 			resp, err := skfStream.Recv()
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				log.Fatalf("cannot receive %v", err)
+				log.Fatalf("cannot receive skf %v", err)
 			}
 			sk, _ := hex.DecodeString(resp.SessionKey)
 			if len(sk) > 0 {
@@ -84,8 +88,9 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 				})
 			}
 		}
-		devicesSkfs := append(devices)
-		syncDevices(ch, devicesSkfs, skfs, "skfs")
+		fmt.Printf("[sync] Found %d skfs\n", len(skfs))
+
+		syncDevices(ch, devices, skfs, "skfs")
 	}
 }
 
