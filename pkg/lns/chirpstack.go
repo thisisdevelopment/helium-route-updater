@@ -52,12 +52,14 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 
 	streamMetaKey := "stream:meta"
 	streamRequestKey := "api:stream:request"
+	streamGwFrameKey := "gw:stream:frame"
 	lastMetaId := "$"
 	lastRequestId := "$"
+	lastGwFrameId := "$"
 
 	for {
 		resp, err := rdb.XRead(ctx, &redis.XReadArgs{
-			Streams: []string{streamMetaKey, streamRequestKey, lastMetaId, lastRequestId},
+			Streams: []string{streamMetaKey, streamRequestKey, streamGwFrameKey, lastMetaId, lastRequestId, lastGwFrameId},
 			Count:   10,
 			Block:   0,
 		}).Result()
@@ -86,7 +88,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 							Delete: []*types.Device{},
 						}
 					}
-				} else {
+				} else if streamResp.Stream == streamMetaKey {
 					lastMetaId = msg.ID
 					if b, ok := msg.Values["down"].(string); ok {
 						var pl meta.DownlinkMeta
@@ -101,13 +103,16 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 								Delete: []*types.Device{},
 							}
 						}
-					} else if b, ok := msg.Values["up"].(string); ok {
+					}
+				} else if streamResp.Stream == streamGwFrameKey {
+					lastGwFrameId = msg.ID
+					if b, ok := msg.Values["up"].(string); ok {
 						if c.config.AutoRoaming {
-							var pl meta.UplinkMeta
+							var pl chirpstack.UplinkFrameLog
 							if err := proto.Unmarshal([]byte(b), &pl); err != nil {
 								log.Fatal(err)
 							}
-							if pl.MessageType == common.MType_JOIN_REQUEST || pl.MessageType == common.MType_REJOIN_REQUEST {
+							if pl.MType == common.MType_JOIN_REQUEST || pl.MType == common.MType_REJOIN_REQUEST {
 								region, ok := pl.RxInfo[0].Metadata["region_config_id"]
 								if ok {
 									c.AutoRoaming(pl.DevEui, region)
