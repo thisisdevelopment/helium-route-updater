@@ -113,9 +113,12 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 								log.Fatal(err)
 							}
 							if pl.MType == common.MType_JOIN_REQUEST || pl.MType == common.MType_REJOIN_REQUEST {
-								region, ok := pl.RxInfo[0].Metadata["region_config_id"]
+								region, ok := pl.RxInfo[0].Metadata["region_common_name"]
 								if ok {
-									c.AutoRoaming(pl.DevEui, region)
+									regionId, ok := common.Region_value[region]
+									if ok {
+										c.AutoRoaming(pl.DevEui, common.Region(regionId))
+									}
 								}
 							}
 						}
@@ -179,7 +182,7 @@ func (c *ChirpstackClient) GetDevice(deviceId string) *types.Device {
 	}
 }
 
-func (c *ChirpstackClient) AutoRoaming(deviceId string, regionId string) {
+func (c *ChirpstackClient) AutoRoaming(deviceId string, region common.Region) {
 	d, err := c.deviceClient.Get(context.Background(), &chirpstack.GetDeviceRequest{DevEui: deviceId})
 	if err != nil {
 		panic(err)
@@ -190,9 +193,9 @@ func (c *ChirpstackClient) AutoRoaming(deviceId string, regionId string) {
 		panic(err)
 	}
 
-	if profile.DeviceProfile.RegionConfigId != regionId {
-		fmt.Printf("[lns] autoroaming %s; updating region from %s to %s\n", deviceId, profile.DeviceProfile.RegionConfigId, regionId)
-		profile.DeviceProfile.RegionConfigId = regionId
+	if profile.DeviceProfile.Region != region {
+		fmt.Printf("[lns] autoroaming %s; updating region from %s to %s\n", deviceId, profile.DeviceProfile.Region.String(), region.String())
+		profile.DeviceProfile.Region = region
 		_, err := c.deviceProfileClient.Update(context.Background(), &chirpstack.UpdateDeviceProfileRequest{DeviceProfile: profile.DeviceProfile})
 		if err != nil {
 			panic(err)
