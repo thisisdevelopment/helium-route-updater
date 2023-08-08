@@ -42,7 +42,7 @@ LNS_API_ENDPOINT=<proto>://<chirpstack-server-hostname>
 LNS_LISTEN=redis://<redis-server-hostname>:<port>/<dbnum>
 LNS_AUTO_ROAMING=<boolean>
 HELIUM_ROUTE_ID=<route uuid>
-HELIUM_KEYPAIR=<hex encoded keypair>
+HELIUM_KEYPAIR=<hex encoded keypair or file containing the keypair (should start with ./ or /)>
 HELIUM_SERVER=https://config.iot.mainnet.helium.io:6080
 ```
 

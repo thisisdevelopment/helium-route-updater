@@ -11,6 +11,8 @@ import (
 	"github.com/thisisdevelopment/helium-route-updater/pkg/types"
 	"io"
 	"log"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -18,7 +20,16 @@ func main() {
 	config := types.ConfigFromEnv()
 	ch := make(chan types.DeviceEvent)
 	syncCh := make(chan bool)
-	keypair := helium_crypto.KeyPairFromString(config.Helium.KeyPair)
+	var keypair *helium_crypto.KeyPair
+	if strings.HasPrefix(config.Helium.KeyPair, "/") || strings.HasPrefix(config.Helium.KeyPair, "./") {
+		dat, err := os.ReadFile(config.Helium.KeyPair)
+		if err != nil {
+			log.Fatalf("Unable to read keypair from file: %s\n", config.Helium.KeyPair)
+		}
+		keypair = helium_crypto.KeyPairFromBytes(dat)
+	} else {
+		keypair = helium_crypto.KeyPairFromString(config.Helium.KeyPair)
+	}
 	heliumClient := helium_api.NewClient(config.Helium.Server, keypair)
 	lnsClient := lns.NewClient(config.Lns)
 
