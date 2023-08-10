@@ -975,7 +975,7 @@ type OrgListResV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Orgs []*OrgV1 `protobuf:"bytes,1,rep,name=orgs,proto3" json:"orgs,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,3,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -1381,7 +1381,7 @@ type OrgResV1 struct {
 	Org                *OrgV1                 `protobuf:"bytes,1,opt,name=org,proto3" json:"org,omitempty"`
 	NetId              uint32                 `protobuf:"varint,2,opt,name=net_id,json=netId,proto3" json:"net_id,omitempty"`
 	DevaddrConstraints []*DevaddrConstraintV1 `protobuf:"bytes,3,rep,name=devaddr_constraints,json=devaddrConstraints,proto3" json:"devaddr_constraints,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,5,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -1542,7 +1542,7 @@ type OrgDisableResV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Oui uint64 `protobuf:"varint,1,opt,name=oui,proto3" json:"oui,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,3,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -1689,7 +1689,7 @@ type OrgEnableResV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Oui uint64 `protobuf:"varint,1,opt,name=oui,proto3" json:"oui,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,3,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -1836,7 +1836,7 @@ type RouteListResV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Routes []*RouteV1 `protobuf:"bytes,1,rep,name=routes,proto3" json:"routes,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,3,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -2210,7 +2210,7 @@ type RouteResV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Route *RouteV1 `protobuf:"bytes,1,opt,name=route,proto3" json:"route,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,3,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -2437,7 +2437,7 @@ type RouteEuisResV1 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,2,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -2657,7 +2657,7 @@ type RouteDevaddrRangesResV1 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,2,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -2788,7 +2788,7 @@ type RouteStreamResV1 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,2,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -3239,7 +3239,7 @@ type RouteSkfUpdateResV1 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,2,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -3373,7 +3373,7 @@ type GatewayRegionParamsResV1 struct {
 	Gain   uint64                           `protobuf:"varint,3,opt,name=gain,proto3" json:"gain,omitempty"`
 	// Signature over the response by the config service
 	Signature []byte `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,6,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -3523,7 +3523,7 @@ type GatewayLocationResV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Location string `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,3,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -3678,7 +3678,7 @@ type AdminLoadRegionResV1 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,2,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -3884,7 +3884,7 @@ type AdminKeyResV1 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,2,opt,name=signer,proto3" json:"signer,omitempty"`
@@ -4446,7 +4446,7 @@ type RegionParamsResV1 struct {
 	Signature []byte `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
 	// pubkey binary of the signing keypair
 	Signer []byte `protobuf:"bytes,4,opt,name=signer,proto3" json:"signer,omitempty"`
-	// unix epoch timestamp in seconds
+	// in milliseconds since unix epoch
 	Timestamp uint64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 }
 
