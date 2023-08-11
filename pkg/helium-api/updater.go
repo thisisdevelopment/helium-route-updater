@@ -26,6 +26,7 @@ func Run(client *Client, routeId string, ch <-chan types.DeviceEvent) {
 					Devaddr:    dev.DevAddr,
 					SessionKey: hex.EncodeToString(dev.SessionKey),
 					Action:     iot_config.ActionV1_add,
+					MaxCopies:  dev.MaxCopies,
 				})
 			}
 			if dev.JoinEui != 0 && dev.DevEui != 0 {

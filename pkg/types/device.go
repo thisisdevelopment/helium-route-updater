@@ -5,6 +5,7 @@ type Device struct {
 	JoinEui    uint64
 	DevAddr    uint32
 	SessionKey []byte
+	MaxCopies  uint32
 }
 
 type DeviceEvent struct {

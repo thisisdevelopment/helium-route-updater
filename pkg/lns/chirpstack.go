@@ -87,6 +87,12 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 							Update: []*types.Device{c.GetDevice(pl.Metadata["dev_eui"])},
 							Delete: []*types.Device{},
 						}
+					} else if pl.Service == "api.DeviceService" && pl.Method == "Update" {
+						fmt.Printf("[lns][%s] device updated %s\n", msg.ID, pl.Metadata["dev_eui"])
+						ch <- types.DeviceEvent{
+							Update: []*types.Device{c.GetDevice(pl.Metadata["dev_eui"])},
+							Delete: []*types.Device{},
+						}
 					}
 				} else if streamResp.Stream == streamMetaKey {
 					lastMetaId = msg.ID
@@ -174,11 +180,20 @@ func (c *ChirpstackClient) GetDevice(deviceId string) *types.Device {
 		devAddr, _ = strconv.ParseUint(activation.DeviceActivation.DevAddr, 16, 32)
 		sKey, _ = hex.DecodeString(activation.DeviceActivation.NwkSEncKey)
 	}
+
+	maxCopies, err := strconv.ParseUint(d.Device.Variables["max_copies"], 10, 32)
+	if err != nil {
+		maxCopies = 0
+	} else if maxCopies > 15 {
+		maxCopies = 15
+	}
+
 	return &types.Device{
 		DevEui:     devEui,
 		JoinEui:    joinEui,
 		DevAddr:    uint32(devAddr),
 		SessionKey: sKey,
+		MaxCopies:  uint32(maxCopies),
 	}
 }
 
