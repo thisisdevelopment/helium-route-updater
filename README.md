@@ -76,6 +76,8 @@ helium-route-updater:
       - HELIUM_ROUTE_ID=<route uuid>
       - HELIUM_KEYPAIR=./delegate_keypair.bin
       - HELIUM_SERVER=https://config.iot.mainnet.helium.io:6080
+    depends_on:
+      - chirpstack
     volumes:
       - ./delegate_keypair.bin:/app/delegate_keypair.bin
 ```
