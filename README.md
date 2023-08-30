@@ -69,7 +69,7 @@ helium-route-updater:
     image: thisisdevelopment/helium-route-updater
     environment:
       - LNS_TYPE=chirpstack
-      - LNS_API_AUTH=<chirpstack apikey>
+      - LNS_API_AUTH=<chirpstack tenant id>:<chirpstack apikey>
       - LNS_API_ENDPOINT=http://chirpstack:8080
       - LNS_LISTEN=redis://redis:6379/0
       - LNS_AUTO_ROAMING=false
