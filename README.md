@@ -57,6 +57,31 @@ is one of the few global LoRaWAN networks and it fits easily in the rest of the 
 **Caution**: The `LNS_AUTO_ROAMING` feature currently assumes each device has it own device profile. If you have a setup 
 were you share device profiles between multiple devices this wil break things!! 
 
+## Chirpstack Docker Compose usage
+
+1. Copy your delegate keypair to the same directory as your docker-compose.yml
+2. Add the below services definition to your docker-compose.yml.
+3. Fill in the missing <> environment variable values.
+4. Run `docker-compose down && docker-compose up -d`
+
+```
+helium-route-updater:
+    image: thisisdevelopment/helium-route-updater
+    environment:
+      - LNS_TYPE=chirpstack
+      - LNS_API_AUTH=<chirpstack tenant id>:<chirpstack apikey>
+      - LNS_API_ENDPOINT=http://chirpstack:8080
+      - LNS_LISTEN=redis://redis:6379/0
+      - LNS_AUTO_ROAMING=false
+      - HELIUM_ROUTE_ID=<route uuid>
+      - HELIUM_KEYPAIR=./delegate_keypair.bin
+      - HELIUM_SERVER=https://config.iot.mainnet.helium.io:6080
+    depends_on:
+      - chirpstack
+    volumes:
+      - ./delegate_keypair.bin:/app/delegate_keypair.bin
+```
+
 ## Library usage
 
 Please use the ssl/tls endpoint for production: https://config.iot.mainnet.helium.io:6080
