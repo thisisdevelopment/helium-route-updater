@@ -11,7 +11,7 @@ ADD . /app
 WORKDIR /app
 RUN ./build.sh
 
-FROM gcr.io/distroless/base-debian11
+FROM gcr.io/distroless/base-debian12
 COPY --from=build /app/bin/* /app/
 
 WORKDIR /app
