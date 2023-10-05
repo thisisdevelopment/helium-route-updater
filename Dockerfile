@@ -1,4 +1,4 @@
-FROM golang:1.18 as build
+FROM golang:1.21 as build
 
 RUN apt-get update && \
     apt-get install -y protobuf-compiler && \

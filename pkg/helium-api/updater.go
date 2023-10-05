@@ -81,9 +81,10 @@ func Run(client *Client, routeId string, ch <-chan types.DeviceEvent) {
 			}
 		}
 
-		if len(skfs) > 0 {
-			//TODO: limit to max 100 updates in a single call
-			_, err := routeClient.UpdateSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfUpdateReqV1{RouteId: routeId, Updates: skfs}, client.Keypair))
+		limit := 100
+		for i := 0; i < len(skfs); i += limit {
+			batch := skfs[i:min(i+limit, len(skfs))]
+			_, err := routeClient.UpdateSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfUpdateReqV1{RouteId: routeId, Updates: batch}, client.Keypair))
 			if err != nil {
 				panic(err)
 			}
