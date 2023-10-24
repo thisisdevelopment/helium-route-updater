@@ -5,21 +5,29 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"log"
+	"strconv"
+	"strings"
+	"sync"
+
 	chirpstack "github.com/chirpstack/chirpstack/api/go/v4/api"
 	"github.com/chirpstack/chirpstack/api/go/v4/common"
 	"github.com/chirpstack/chirpstack/api/go/v4/meta"
 	"github.com/redis/go-redis/v9"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/types"
+	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
-	"log"
-	"strconv"
-	"strings"
 )
 
 type APIToken string
+
+const (
+	// 8 concurrent clients to chirpstack
+	clientConcurrent = 8
+)
 
 func (a APIToken) GetRequestMetadata(ctx context.Context, url ...string) (map[string]string, error) {
 	return map[string]string{
@@ -239,29 +247,62 @@ func (c *ChirpstackClient) AutoRoaming(deviceId string, region common.Region) {
 }
 
 func (c *ChirpstackClient) GetDevices() []*types.Device {
-	devices := []*types.Device{}
+
+	var (
+		devices       = []*types.Device{}
+		sem           = semaphore.NewWeighted(clientConcurrent)
+		wg            = sync.WaitGroup{}
+		deviceChannel = make(chan *types.Device)
+		done          = make(chan bool)
+	)
+
+	go func() {
+		for dev := range deviceChannel {
+			devices = append(devices, dev)
+			wg.Done()
+		}
+	}()
+
+	go func() {
+		wg.Wait()
+		done <- true
+	}()
+
 	for _, appId := range c.GetApplicationIds() {
-		offset := 0
-		limit := 100
-		count := limit
-		for offset < count {
+		wg.Add(1)
+		offset, limit := uint32(0), uint32(100)
+
+		for {
 			resp, err := c.deviceClient.List(context.Background(), &chirpstack.ListDevicesRequest{
-				Limit:         uint32(limit),
-				Offset:        uint32(offset),
+				Limit:         limit,
+				Offset:        offset,
 				ApplicationId: appId,
 			})
 			if err != nil {
 				panic(err)
 			}
 
-			for _, dev := range resp.Result {
-				devices = append(devices, c.GetDevice(dev.DevEui))
-			}
+			for _, dev := range resp.GetResult() {
+				if err := sem.Acquire(context.TODO(), 1); err != nil {
+					panic(err)
+				}
+				wg.Add(1)
 
-			count = int(resp.TotalCount)
-			offset = offset + limit
+				go func(devEui string) {
+					defer sem.Release(1)
+					deviceChannel <- c.GetDevice(devEui)
+
+				}(dev.DevEui)
+			}
+			if offset > resp.GetTotalCount() {
+				break
+			}
+			offset += limit
 		}
+		wg.Done()
 	}
+	<-done
+	close(deviceChannel)
 	return devices
 }
 
@@ -292,5 +333,12 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	appClient := chirpstack.NewApplicationServiceClient(conn)
 	tenantClient := chirpstack.NewTenantServiceClient(conn)
 
-	return &ChirpstackClient{BaseClient: client, deviceClient: deviceClient, deviceProfileClient: deviceProfileClient, appClient: appClient, tenantClient: tenantClient, tenantId: authParts[0]}
+	return &ChirpstackClient{
+		BaseClient:          client,
+		deviceClient:        deviceClient,
+		deviceProfileClient: deviceProfileClient,
+		appClient:           appClient,
+		tenantClient:        tenantClient,
+		tenantId:            authParts[0],
+	}
 }
