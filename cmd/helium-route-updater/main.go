@@ -36,25 +36,22 @@ func main() {
 	fmt.Printf("Starting\n")
 
 	go helium_api.Run(heliumClient, config.Helium.RouteId, ch)
-	go lnsClient.Listen(ch, syncCh)
+	go lnsClient.Listen(ch)
 	go sync(config.Helium.RouteId, ch, syncCh, heliumClient, lnsClient)
 	scheduledSync(syncCh)
 }
 
 func scheduledSync(syncCh chan<- bool) {
 	syncCh <- true
-	for range time.Tick(1 * time.Hour) {
+	for range time.Tick(4 * time.Hour) {
 		syncCh <- true
 	}
 }
 
 func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliumClient *helium_api.Client, lnsClient lns.Client) {
+	ctx := context.Background()
 	for range syncCh {
 		fmt.Printf("[sync] starting full sync\n")
-		devices := lnsClient.GetDevices()
-		ctx := context.Background()
-
-		fmt.Printf("[sync] Found %d devices in the lns\n", len(devices))
 
 		euiStream, err := heliumClient.NewRouteClient().GetEuis(ctx, helium_crypto.SignRequest(&iot_config.RouteGetEuisReqV1{RouteId: routeId}, heliumClient.Keypair))
 		if err != nil {
@@ -68,16 +65,14 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 				break
 			}
 			if err != nil {
-				log.Fatalf("cannot receive skf %v", err)
+				log.Fatalf("cannot receive eui %v", err)
 			}
 			euis = append(euis, &types.Device{
 				DevEui:  resp.DevEui,
 				JoinEui: resp.AppEui,
 			})
 		}
-
-		fmt.Printf("[sync] Found %d euis\n", len(euis))
-		syncDevices(ch, devices, euis, "euis")
+		fmt.Printf("[sync] Found %d euis in our helium route\n", len(euis))
 
 		skfs := []*types.Device{}
 		skfStream, err := heliumClient.NewRouteClient().ListSkfs(ctx, helium_crypto.SignRequest(&iot_config.RouteSkfListReqV1{RouteId: routeId}, heliumClient.Keypair))
@@ -103,8 +98,16 @@ func sync(routeId string, ch chan<- types.DeviceEvent, syncCh <-chan bool, heliu
 				fmt.Printf("[sync] uhhm .. skf does not contain session key? %#V\n", resp)
 			}
 		}
-		fmt.Printf("[sync] Found %d skfs\n", len(skfs))
+		fmt.Printf("[sync] Found %d skfs in our helium route\n", len(skfs))
 
+		devices := lnsClient.GetDevices()
+		fmt.Printf("[sync] Found %d devices in the lns\n", len(devices))
+
+		//TODO: we have race condition here .. while we are retrieving the devices from helium/lns we can receive updates
+		//      these updates will (possibly) not be reflected here .. leading to false diffs and bogus updates :-/
+		//      ideally we disable the updates during a full sync; but that is currently not possible as the full
+		//      sync can take a long time with a lot of devices.
+		syncDevices(ch, devices, euis, "euis")
 		syncDevices(ch, devices, skfs, "skfs")
 	}
 }
@@ -149,8 +152,12 @@ func syncDevices(ch chan<- types.DeviceEvent, lns []*types.Device, helium []*typ
 	for key, dev := range existing {
 		var d *types.Device
 		if syncType == "euis" {
-			fmt.Printf("[sync] missing eui %s => adding on helium\n", key)
-			d = &types.Device{JoinEui: dev.JoinEui, DevEui: dev.DevEui}
+			if dev.JoinEui != 0x0 {
+				fmt.Printf("[sync] missing eui %s => adding on helium\n", key)
+				d = &types.Device{JoinEui: dev.JoinEui, DevEui: dev.DevEui}
+			} else {
+				fmt.Printf("[sync] eui without joineui %s => not adding\n", key)
+			}
 		} else if len(dev.SessionKey) > 0 {
 			fmt.Printf("[sync] missing sessionkey %s => adding on helium\n", key)
 			d = &types.Device{DevAddr: dev.DevAddr, SessionKey: dev.SessionKey}

@@ -6,7 +6,8 @@ import (
 
 type Client interface {
 	GetDevices() []*types.Device
-	Listen(ch chan<- types.DeviceEvent, syncCh chan<- bool)
+	GetDevice(deviceId string) *types.Device
+	Listen(ch chan<- types.DeviceEvent)
 }
 
 type BaseClient struct {

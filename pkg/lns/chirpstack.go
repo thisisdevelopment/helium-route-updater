@@ -48,7 +48,7 @@ func (c *ChirpstackClient) parseDevEui(deviceId string) ([]byte, bool) {
 	return decoded, true
 }
 
-func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- bool) {
+func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 	opt, err := redis.ParseURL(c.config.Listen)
 	if err != nil {
 		panic(err)
@@ -96,10 +96,20 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent, syncCh chan<- boo
 							}
 
 							if pl.Method == "Delete" {
-								//TODO: as we don't have the join eui here, we cannot remove it from our helium route
-								//      instead we schedule a full sync
 								fmt.Printf("[lns][%s] device deleted: %s\n", msg.ID, pl.Metadata["dev_eui"])
-								syncCh <- true
+								devEui, _ := strconv.ParseUint(pl.Metadata["dev_eui"], 16, 64)
+								ch <- types.DeviceEvent{
+									Update: []*types.Device{},
+									Delete: []*types.Device{
+										{
+											DevEui:     devEui,
+											JoinEui:    0,
+											DevAddr:    0,
+											SessionKey: nil,
+											MaxCopies:  0,
+										},
+									},
+								}
 							} else if pl.Method == "Create" {
 								fmt.Printf("[lns][%s] device created %s\n", msg.ID, pl.Metadata["dev_eui"])
 								ch <- types.DeviceEvent{

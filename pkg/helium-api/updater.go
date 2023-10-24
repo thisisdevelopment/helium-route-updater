@@ -7,6 +7,8 @@ import (
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
 	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/types"
+	"io"
+	"log"
 )
 
 func Run(client *Client, routeId string, ch <-chan types.DeviceEvent) {
@@ -57,10 +59,35 @@ func Run(client *Client, routeId string, ch <-chan types.DeviceEvent) {
 					Action: iot_config.ActionV1_remove,
 					EuiPair: &iot_config.EuiPairV1{
 						RouteId: routeId,
-						AppEui:  dev.JoinEui,
 						DevEui:  dev.DevEui,
+						AppEui:  dev.JoinEui,
 					},
 				})
+			} else if dev.DevEui != 0 {
+				// As devices are removed from the LNS we cannot get the JoinEui from there; here we retrieve the
+				// current eui pairs from helium and remove all that match on the DevEui
+				// as the LNS has a uniqueness on DevEui this should be safe
+				euiStream, _ := routeClient.GetEuis(ctx, helium_crypto.SignRequest(&iot_config.RouteGetEuisReqV1{RouteId: routeId}, client.Keypair))
+				for {
+					resp, err := euiStream.Recv()
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						log.Fatalf("cannot receive eui %v", err)
+					}
+					if resp.DevEui == dev.DevEui {
+						fmt.Printf("[helium][%s] removing euipair %x %x\n", routeId, dev.DevEui, resp.AppEui)
+						euis = append(euis, &iot_config.RouteUpdateEuisReqV1{
+							Action: iot_config.ActionV1_remove,
+							EuiPair: &iot_config.EuiPairV1{
+								RouteId: routeId,
+								DevEui:  dev.DevEui,
+								AppEui:  resp.AppEui,
+							},
+						})
+					}
+				}
 			}
 		}
 
