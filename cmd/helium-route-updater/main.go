@@ -43,7 +43,7 @@ func main() {
 
 func scheduledSync(syncCh chan<- bool) {
 	syncCh <- true
-	for range time.Tick(4 * time.Hour) {
+	for range time.Tick(1 * time.Hour) {
 		syncCh <- true
 	}
 }
