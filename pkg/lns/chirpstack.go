@@ -10,6 +10,7 @@ import (
 	"github.com/chirpstack/chirpstack/api/go/v4/meta"
 	"github.com/redis/go-redis/v9"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/types"
+	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,9 +18,15 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type APIToken string
+
+const (
+	// max concurrent go-routines for listing devices
+	clientConcurrent = 32
+)
 
 func (a APIToken) GetRequestMetadata(ctx context.Context, url ...string) (map[string]string, error) {
 	return map[string]string{
@@ -249,29 +256,50 @@ func (c *ChirpstackClient) AutoRoaming(deviceId string, region common.Region) {
 }
 
 func (c *ChirpstackClient) GetDevices() []*types.Device {
-	devices := []*types.Device{}
+
+	var (
+		devices = []*types.Device{}
+		sem     = semaphore.NewWeighted(clientConcurrent)
+		mutex   = sync.Mutex{}
+	)
+
 	for _, appId := range c.GetApplicationIds() {
-		offset := 0
-		limit := 100
-		count := limit
-		for offset < count {
+		offset, limit := uint32(0), uint32(100)
+		for {
 			resp, err := c.deviceClient.List(context.Background(), &chirpstack.ListDevicesRequest{
-				Limit:         uint32(limit),
-				Offset:        uint32(offset),
+				Limit:         limit,
+				Offset:        offset,
 				ApplicationId: appId,
 			})
+
 			if err != nil {
 				panic(err)
 			}
 
-			for _, dev := range resp.Result {
-				devices = append(devices, c.GetDevice(dev.DevEui))
-			}
+			for _, dev := range resp.GetResult() {
+				if err := sem.Acquire(context.TODO(), 1); err != nil {
+					panic(err)
+				}
 
-			count = int(resp.TotalCount)
-			offset = offset + limit
+				go func(devEui string) {
+					defer sem.Release(1)
+					dev := c.GetDevice(devEui)
+					mutex.Lock()
+					devices = append(devices, dev)
+					mutex.Unlock()
+				}(dev.DevEui)
+			}
+			offset += limit
+			if offset > resp.GetTotalCount() {
+				break
+			}
 		}
 	}
+
+	if err := sem.Acquire(context.TODO(), int64(clientConcurrent)); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+	}
+
 	return devices
 }
 
