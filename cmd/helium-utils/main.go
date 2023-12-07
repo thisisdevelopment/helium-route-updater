@@ -15,16 +15,16 @@ func main() {
 /**
  * Commands to implement:
  * - check --all <= by default only passive checks
- * - check config
+ * ✓ check config
  * - check lns config <= how to get regions / devaddrs / netid / allow_unknown_gateways
  * - check lns connection
  * - check helium auth (validate oui matches delegate keypair, make sure not to use owner keypair)
  * - check helium route
  * - check sync <= checks if route is in sync with lns
  * - check ingress (public ip check + connection check + create device + per region: simulate join + simulate uplink => validate devaddr/netid, if join fails; check if it works when adding the gateway)
- * - keypair info
- * - keypair private
- * - keypair public
+ * ✓ keypair info
+ * ✓ keypair private
+ * ✓ keypair public
  * - helium route create <= how to get regions / devaddrs?
  * - helium route info
  * - helium org info
