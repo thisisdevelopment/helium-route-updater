@@ -121,7 +121,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 								fmt.Printf("[lns][%s] device created %s\n", msg.ID, pl.Metadata["dev_eui"])
 								devices, err := c.GetDevice(pl.Metadata["dev_eui"])
 								if err != nil {
-									log.Printf("Error while creating device :: %s\n", err)
+									fmt.Printf("[lns][error][%s] error creating device lns; skipping helium update for device create: %s :: %s\n", msg.ID, pl.Metadata["dev_eui"], err)
 									continue
 								}
 								ch <- types.DeviceEvent{
@@ -132,7 +132,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 								fmt.Printf("[lns][%s] device updated %s\n", msg.ID, pl.Metadata["dev_eui"])
 								device, err := c.GetDevice(pl.Metadata["dev_eui"])
 								if err != nil {
-									log.Printf("Error while updating device :: %s\n", err)
+									fmt.Printf("[lns][error][%s] error fetching device from lns; skipping helium update for device update: %s :: %s\n", msg.ID, pl.Metadata["dev_eui"], err)
 									continue
 								}
 								ch <- types.DeviceEvent{
@@ -154,7 +154,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 							fmt.Printf("[lns][%s] device joined %s\n", msg.ID, pl.DevEui)
 							device, err := c.GetDevice(pl.DevEui)
 							if err != nil {
-								log.Printf("Error while joining device :: %s\n", err)
+								fmt.Printf("[lns][error][%s] error while joining device; cant get device %s\n", msg.ID, err)
 								continue
 							}
 							ch <- types.DeviceEvent{
@@ -178,7 +178,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 									if ok {
 										e := c.AutoRoaming(pl.DevEui, common.Region(regionId))
 										if e != nil {
-											log.Printf("Error while AutoRoaming :: %s\n", e)
+											fmt.Printf("[lns][error][%s] error while auto-roaming :: %s\n", msg.ID, err)
 										}
 									}
 								}
@@ -305,8 +305,7 @@ func (c *ChirpstackClient) GetDevices() []*types.Device {
 					defer sem.Release(1)
 					dev, err := c.GetDevice(devEui)
 					if err != nil {
-						log.Printf("Cant get device %s: %s", devEui, err)
-						return
+						log.Fatalf("[lns][error][%s] error fetching device from lns; %s\n", devEui, err)
 					}
 					mutex.Lock()
 					defer mutex.Unlock()
@@ -321,7 +320,7 @@ func (c *ChirpstackClient) GetDevices() []*types.Device {
 	}
 
 	if err := sem.Acquire(context.TODO(), int64(clientConcurrent)); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
+		log.Printf("Failed to acquire semaphore: %v\n", err)
 	}
 
 	return devices
@@ -349,7 +348,7 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	)
 
 	if err != nil {
-		log.Fatalf("Cannot connect to server: %s", err)
+		fmt.Printf("[lns][error] Connection error %s\n", err)
 	}
 
 	deviceClient := chirpstack.NewDeviceServiceClient(conn)

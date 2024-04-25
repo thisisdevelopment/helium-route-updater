@@ -93,7 +93,7 @@ func KeyPairFromBytes(input []byte) (*KeyPair, error) {
 		privateKey = nil
 		publicKey = input[1:]
 	} else {
-		return &KeyPair{}, errors.New(fmt.Sprintf("invalid keypair length %d", len(input)))
+		return nil, errors.New(fmt.Sprintf("invalid keypair length %d", len(input)))
 	}
 
 	return &KeyPair{
