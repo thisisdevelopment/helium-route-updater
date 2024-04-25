@@ -6,7 +6,7 @@ import (
 
 type Client interface {
 	GetDevices() []*types.Device
-	GetDevice(deviceId string) *types.Device
+	GetDevice(deviceId string) (*types.Device, error)
 	Listen(ch chan<- types.DeviceEvent)
 }
 
