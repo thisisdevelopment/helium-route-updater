@@ -1,6 +1,7 @@
 package helium_api
 
 import (
+	"context"
 	"crypto/tls"
 	"github.com/thisisdevelopment/helium-route-updater/pkg/api/helium/service/iot_config"
 	helium_crypto "github.com/thisisdevelopment/helium-route-updater/pkg/helium-crypto"
@@ -9,6 +10,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -24,7 +26,13 @@ func NewClient(server string, keypair *helium_crypto.KeyPair) *Client {
 	} else if strings.HasPrefix(server, "https://") {
 		server = server[8:]
 	}
-	conn, err := grpc.Dial(
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	conn, err := grpc.DialContext(
+		ctx,
 		server,
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`),
 		grpc.WithTransportCredentials(serverCredentials),
