@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type APIToken string
@@ -61,7 +62,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 		panic(err)
 	}
 
-	rdb := redis.NewClient(opt)
+	rdb := redis.NewClient(opt).WithTimeout(time.Second * 5)
 	ctx := context.Background()
 
 	streamMetaKey := "stream:meta"
@@ -307,6 +308,10 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	authParts := strings.Split(client.config.ApiAuth, ":")
 	server := client.config.ApiEndpoint
 	serverCredentials := credentials.NewTLS(&tls.Config{})
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
 	if strings.HasPrefix(server, "http://") {
 		server = server[7:]
 		serverCredentials = insecure.NewCredentials()
@@ -314,13 +319,12 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 		server = server[8:]
 	}
 
-	dialOpts := []grpc.DialOption{
+	conn, err := grpc.DialContext(ctx, server,
 		grpc.WithBlock(),
 		grpc.WithPerRPCCredentials(APIToken(authParts[1])),
 		grpc.WithTransportCredentials(serverCredentials),
-	}
+	)
 
-	conn, err := grpc.Dial(server, dialOpts...)
 	if err != nil {
 		panic(err)
 	}
