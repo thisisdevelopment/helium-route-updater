@@ -121,7 +121,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 								fmt.Printf("[lns][%s] device created %s\n", msg.ID, pl.Metadata["dev_eui"])
 								devices, err := c.GetDevice(pl.Metadata["dev_eui"])
 								if err != nil {
-									fmt.Printf("[lns][error][%s] error creating device lns; skipping helium update for device create: %s :: %s\n", msg.ID, pl.Metadata["dev_eui"], err)
+									fmt.Printf("[lns][error][%s] error getting created device from lns; skipping helium update for device create: %s :: %s\n", msg.ID, pl.Metadata["dev_eui"], err)
 									continue
 								}
 								ch <- types.DeviceEvent{
@@ -154,7 +154,7 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 							fmt.Printf("[lns][%s] device joined %s\n", msg.ID, pl.DevEui)
 							device, err := c.GetDevice(pl.DevEui)
 							if err != nil {
-								fmt.Printf("[lns][error][%s] error while joining device; cant get device %s\n", msg.ID, err)
+								fmt.Printf("[lns][error][%s] error fetching device %s from lns; skipping update %s\n", msg.ID, pl.DevEui, err)
 								continue
 							}
 							ch <- types.DeviceEvent{
@@ -348,7 +348,7 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	)
 
 	if err != nil {
-		fmt.Printf("[lns][error] Connection error %s\n", err)
+		log.Fatalf("[lns][error] Connection error %s\n", err)\
 	}
 
 	deviceClient := chirpstack.NewDeviceServiceClient(conn)
