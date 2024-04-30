@@ -2,8 +2,9 @@ package helium_crypto
 
 import (
 	"crypto/ed25519"
+	"errors"
+	"fmt"
 	"github.com/btcsuite/btcutil/base58"
-	"strconv"
 )
 
 /**
@@ -83,7 +84,7 @@ func (k *KeyPair) String() string {
 	return base58.CheckEncode(k.Bytes(), 0)
 }
 
-func KeyPairFromBytes(input []byte) *KeyPair {
+func KeyPairFromBytes(input []byte) (*KeyPair, error) {
 	var publicKey, privateKey []byte
 	if len(input) == ed25519.PrivateKeySize+1 {
 		privateKey = input[1:]
@@ -92,7 +93,7 @@ func KeyPairFromBytes(input []byte) *KeyPair {
 		privateKey = nil
 		publicKey = input[1:]
 	} else {
-		panic("invalid keypair length: " + strconv.FormatInt(int64(len(input)), 10))
+		return nil, errors.New(fmt.Sprintf("invalid keypair length %d", len(input)))
 	}
 
 	return &KeyPair{
@@ -100,10 +101,10 @@ func KeyPairFromBytes(input []byte) *KeyPair {
 		KeyType:    input[0] & 0xF,
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
-	}
+	}, nil
 }
 
-func KeyPairFromString(input string) *KeyPair {
+func KeyPairFromString(input string) (*KeyPair, error) {
 	bytes, _, _ := base58.CheckDecode(input)
 	return KeyPairFromBytes(bytes)
 }

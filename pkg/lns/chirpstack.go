@@ -59,7 +59,7 @@ func (c *ChirpstackClient) parseDevEui(deviceId string) ([]byte, bool) {
 func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 	opt, err := redis.ParseURL(c.config.Listen)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Cant parse redis url: %s", err)
 	}
 
 	rdb := redis.NewClient(opt).WithTimeout(time.Second * 5)
@@ -98,7 +98,6 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 							}
 
 							if _, ok := c.parseDevEui(pl.Metadata["dev_eui"]); !ok {
-
 								fmt.Printf("[lns][warn][%s] unable to process request for invalid device: %s\n", msg.ID, pl.Metadata["dev_eui"])
 								continue
 							}
@@ -120,14 +119,24 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 								}
 							} else if pl.Method == "Create" {
 								fmt.Printf("[lns][%s] device created %s\n", msg.ID, pl.Metadata["dev_eui"])
+								devices, err := c.GetDevice(pl.Metadata["dev_eui"])
+								if err != nil {
+									fmt.Printf("[lns][error][%s] error getting created device from lns; skipping helium update for device create: %s :: %s\n", msg.ID, pl.Metadata["dev_eui"], err)
+									continue
+								}
 								ch <- types.DeviceEvent{
-									Update: []*types.Device{c.GetDevice(pl.Metadata["dev_eui"])},
+									Update: []*types.Device{devices},
 									Delete: []*types.Device{},
 								}
 							} else if pl.Method == "Update" {
 								fmt.Printf("[lns][%s] device updated %s\n", msg.ID, pl.Metadata["dev_eui"])
+								device, err := c.GetDevice(pl.Metadata["dev_eui"])
+								if err != nil {
+									fmt.Printf("[lns][error][%s] error fetching device from lns; skipping helium update for device update: %s :: %s\n", msg.ID, pl.Metadata["dev_eui"], err)
+									continue
+								}
 								ch <- types.DeviceEvent{
-									Update: []*types.Device{c.GetDevice(pl.Metadata["dev_eui"])},
+									Update: []*types.Device{device},
 									Delete: []*types.Device{},
 								}
 							}
@@ -143,8 +152,13 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 
 						if pl.MessageType == common.MType_JOIN_ACCEPT {
 							fmt.Printf("[lns][%s] device joined %s\n", msg.ID, pl.DevEui)
+							device, err := c.GetDevice(pl.DevEui)
+							if err != nil {
+								fmt.Printf("[lns][error][%s] error fetching device %s from lns; skipping update %s\n", msg.ID, pl.DevEui, err)
+								continue
+							}
 							ch <- types.DeviceEvent{
-								Update: []*types.Device{c.GetDevice(pl.DevEui)},
+								Update: []*types.Device{device},
 								Delete: []*types.Device{},
 							}
 						}
@@ -162,7 +176,10 @@ func (c *ChirpstackClient) Listen(ch chan<- types.DeviceEvent) {
 								if ok {
 									regionId, ok := common.Region_value[region]
 									if ok {
-										c.AutoRoaming(pl.DevEui, common.Region(regionId))
+										e := c.AutoRoaming(pl.DevEui, common.Region(regionId))
+										if e != nil {
+											fmt.Printf("[lns][error][%s] error while auto-roaming :: %s\n", msg.ID, err)
+										}
 									}
 								}
 							}
@@ -178,7 +195,7 @@ func (c *ChirpstackClient) GetApplicationIds() []string {
 	offset := 0
 	limit := 100
 	count := limit
-	res := []string{}
+	var res []string
 
 	for offset < count {
 		apps, err := c.appClient.List(context.Background(), &chirpstack.ListApplicationsRequest{
@@ -187,7 +204,7 @@ func (c *ChirpstackClient) GetApplicationIds() []string {
 			TenantId: c.tenantId,
 		})
 		if err != nil {
-			panic(err)
+			log.Fatalf("Cant list applications: %s", err)
 		}
 		for _, app := range apps.Result {
 			res = append(res, app.Id)
@@ -199,21 +216,21 @@ func (c *ChirpstackClient) GetApplicationIds() []string {
 	return res
 }
 
-func (c *ChirpstackClient) GetDevice(deviceId string) *types.Device {
+func (c *ChirpstackClient) GetDevice(deviceId string) (*types.Device, error) {
 	d, err := c.deviceClient.Get(context.Background(), &chirpstack.GetDeviceRequest{DevEui: deviceId})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	activation, err := c.deviceClient.GetActivation(context.Background(), &chirpstack.GetDeviceActivationRequest{DevEui: deviceId})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	devEui, _ := strconv.ParseUint(d.Device.DevEui, 16, 64)
 	joinEui, _ := strconv.ParseUint(d.Device.JoinEui, 16, 64)
 	devAddr := uint64(0)
-	sKey := []byte{}
+	var sKey []byte
 	if activation.DeviceActivation != nil {
 		devAddr, _ = strconv.ParseUint(activation.DeviceActivation.DevAddr, 16, 32)
 		sKey, _ = hex.DecodeString(activation.DeviceActivation.NwkSEncKey)
@@ -232,18 +249,18 @@ func (c *ChirpstackClient) GetDevice(deviceId string) *types.Device {
 		DevAddr:    uint32(devAddr),
 		SessionKey: sKey,
 		MaxCopies:  uint32(maxCopies),
-	}
+	}, nil
 }
 
-func (c *ChirpstackClient) AutoRoaming(deviceId string, region common.Region) {
+func (c *ChirpstackClient) AutoRoaming(deviceId string, region common.Region) error {
 	d, err := c.deviceClient.Get(context.Background(), &chirpstack.GetDeviceRequest{DevEui: deviceId})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	profile, err := c.deviceProfileClient.Get(context.Background(), &chirpstack.GetDeviceProfileRequest{Id: d.Device.DeviceProfileId})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if profile.DeviceProfile.Region != region {
@@ -251,9 +268,11 @@ func (c *ChirpstackClient) AutoRoaming(deviceId string, region common.Region) {
 		profile.DeviceProfile.Region = region
 		_, err := c.deviceProfileClient.Update(context.Background(), &chirpstack.UpdateDeviceProfileRequest{DeviceProfile: profile.DeviceProfile})
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+
+	return nil
 }
 
 func (c *ChirpstackClient) GetDevices() []*types.Device {
@@ -284,10 +303,13 @@ func (c *ChirpstackClient) GetDevices() []*types.Device {
 
 				go func(devEui string) {
 					defer sem.Release(1)
-					dev := c.GetDevice(devEui)
+					dev, err := c.GetDevice(devEui)
+					if err != nil {
+						log.Fatalf("[lns][error][%s] error fetching device from lns; %s\n", devEui, err)
+					}
 					mutex.Lock()
+					defer mutex.Unlock()
 					devices = append(devices, dev)
-					mutex.Unlock()
 				}(dev.DevEui)
 			}
 			offset += limit
@@ -298,7 +320,7 @@ func (c *ChirpstackClient) GetDevices() []*types.Device {
 	}
 
 	if err := sem.Acquire(context.TODO(), int64(clientConcurrent)); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
+		log.Printf("Failed to acquire semaphore: %v\n", err)
 	}
 
 	return devices
@@ -326,7 +348,7 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("[lns][error] Connection error %s\n", err)\
 	}
 
 	deviceClient := chirpstack.NewDeviceServiceClient(conn)
