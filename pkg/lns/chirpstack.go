@@ -348,7 +348,7 @@ func NewChirpstackClient(client BaseClient) *ChirpstackClient {
 	)
 
 	if err != nil {
-		log.Fatalf("[lns][error] Connection error %s\n", err)\
+		log.Fatalf("[lns][error] Connection error %s\n", err)
 	}
 
 	deviceClient := chirpstack.NewDeviceServiceClient(conn)
